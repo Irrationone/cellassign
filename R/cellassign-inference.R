@@ -1,4 +1,5 @@
-
+#' Expectation-maximization for cellassign
+#'
 #' @param Y Input matrix of expression counts for N cells (rows)
 #' by G genes (columns)
 #' @param rho Binary matrix of G rows and C columns where
