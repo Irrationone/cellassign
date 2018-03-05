@@ -101,17 +101,25 @@ clone_assignment <- function(em) {
 
 #' @keywords internal
 #'
+#' Compute observed data log-likelihood
+#'
 #' TODO: Fix this. Doesn't iterate over genes at the moment.
 log_likelihood <- function(params, data) {
   ll <- 0
+  gamma_full <- array(NA, dim = c(nrow(data$Y), ncol(data$rho),
+                                  ncol(data$Y)))
   for (g in seq_len(ncol(data$Y))) {
-    gamma_g <- likelihood_yg(y = data$Y[,g],
+    gamma_ncg <- likelihood_yg(y = data$Y[,g],
                              rho = data$rho[g,],
                              s = data$s,
                              params = params[[g]],
                              X = data$X)
-    ll <- ll + sum(gamma_g)
+    gamma_full[,,g] <- gamma_ncg
   }
+  gamma_nc <- apply(gamma_full, c(1,2), sum)
+  gamma_n <- apply(gamma_nc, 1, logSumExp)
+
+  ll <- sum(gamma_n)
   ll
 }
 
