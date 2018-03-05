@@ -1,3 +1,64 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+#' @keywords internal
+#' @importFrom stats dnbinom
+dnbinom2 <- function(x, mu, size) {
+  dnbinom(x, size = size, mu = mu, log = TRUE)
+}
+
+#' Q(theta | theta^t)
+#'
+#' @keywords internal
+#'
+#' @param theta Parameters to optimize
+#' @param y Gene expression
+#' @param gamma Responsibility terms (expectation of clone assignments)
+#' @param data Data
+Q_g <- function(theta, y, gamma, data) {
+  markers <- data$markers # Human-annotated cell type marker vector (length C)
+  X <- data$X # Covariates to regress on (P X N)
+
+  nclust <- length(markers)
+
+  feat_dims <- dim(X)
+  ncoef <- feat_dims[1] + 1
+  ncell <- feat_dims[2]
+
+  # Slice parameter vector
+  delta_g <- theta[1:nclust] # redefine these to be log-transformed from the original doc
+  beta_g <- theta[(nclust+1):(nclust+ncoef)]
+  phi_g <- theta[(nclust+ncoef+1)]
+
+  type_term <- t(exp(delta_g) * markers)
+  coef_term <- X %*% as.matrix([beta_g[2:ncoef])
+
+  # N X C matrix
+  m_g <- exp(matrix(rep(type_term, ncell),
+                    nrow = ncell, byrow = TRUE) +
+               beta_g[1] +
+               matrix(rep(coef_term, nclust),
+                      ncol = nclust, byrow = FALSE)
+  ) * data$s
+  l_c <- dnbinom2(matrix(rep(y, nclust), ncol = nclust, byrow = FALSE),
+                  mu = m_g, size = phi_g)
+
+  qq <- sum(l_c * gamma)
+  -qq
+}
+
+
+
 #' Expectation-maximization for cellassign
 #'
 #' @param Y Input matrix of expression counts for N cells (rows)
