@@ -4,7 +4,8 @@
 \alias{cellassign_inference}
 \title{Expectation-maximization for cellassign}
 \usage{
-cellassign_inference(Y, rho, X = NULL, max_em_iter = 100, rel_tol = 0.001)
+cellassign_inference(Y, rho, X = NULL, max_em_iter = 100, rel_tol = 0.001,
+  multithread = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{Y}{Input matrix of expression counts for N cells (rows)
@@ -13,7 +14,7 @@ by G genes (columns)}
 \item{rho}{Binary matrix of G rows and C columns where
 rho_{gc} = 1 if gene g is a marker for cell type c}
 
-\item{X}{An N by P matrix of covariates \emph{without} an intercept}
+\item{X}{An N by (P-1) matrix of covariates *without* an intercept}
 
 \item{max_em_iter}{Maximum number of EM iterations to perform}
 
@@ -22,3 +23,4 @@ rho_{gc} = 1 if gene g is a marker for cell type c}
 \description{
 Expectation-maximization for cellassign
 }
+
