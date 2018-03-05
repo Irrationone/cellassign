@@ -24,6 +24,7 @@ Q_g <- function(theta, y, gamma, data) {
   ncell <- feat_dims[2]
 
   # Slice parameter vector
+  # TODO: Fix indexing, and refactor this code
   delta_g <- theta[1:nclust] # redefine these to be log-transformed from the original doc
   beta_g <- theta[(nclust+1):(nclust+ncoef)]
   phi_g <- theta[(nclust+ncoef+1)]
@@ -177,6 +178,7 @@ cellassign_inference <- function(Y,
   # Store both data and parameters we have in lists to
   # easily pass between functions
   params <- list(
+    delta = matrix(0, nrow = G, ncol = C),
     beta = matrix(0, nrow = G, ncol = P),
     phi = rep(1, G)
   )
