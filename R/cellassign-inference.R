@@ -1,16 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
 #' @keywords internal
 #' @importFrom stats dnbinom
 dnbinom2 <- function(x, mu, size) {
@@ -26,10 +14,10 @@ dnbinom2 <- function(x, mu, size) {
 #' @param gamma Responsibility terms (expectation of clone assignments), N-by-C
 #' @param data Data
 Q_g <- function(theta, y, gamma, data) {
-  markers <- data$markers # Human-annotated cell type marker vector (length C)
+  rho <- data$rho # Human-annotated cell type marker vector (length C)
   X <- data$X # Covariates to regress on (P X (N+1))
 
-  nclust <- length(markers)
+  nclust <- length(rho)
 
   feat_dims <- dim(X)
   ncoef <- feat_dims[1]
@@ -40,7 +28,7 @@ Q_g <- function(theta, y, gamma, data) {
   beta_g <- theta[(nclust+1):(nclust+ncoef)]
   phi_g <- theta[(nclust+ncoef+1)]
 
-  type_term <- t(exp(delta_g) * markers)
+  type_term <- t(exp(delta_g) * rho)
   coef_term <- X %*% as.matrix([beta_g)
 
   # N X C matrix
@@ -60,10 +48,10 @@ Q_g <- function(theta, y, gamma, data) {
 #'
 #'
 Q_gr_g <- function(theta, y, gamma, data) {
-  markers <- data$markers # Human-annotated cell type marker vector (length C)
+  rho <- data$rho # Human-annotated cell type marker vector (length C)
   X <- data$X # Covariates to regress on (P X (N+1))
 
-  nclust <- length(markers)
+  nclust <- length(rho)
 
   feat_dims <- dim(X)
   ncoef <- feat_dims[1] + 1
@@ -76,14 +64,13 @@ Q_gr_g <- function(theta, y, gamma, data) {
   gr <- rep(0, length(theta))
   m_g <- exp(matrix(rep(type_term, ncell),
                     nrow = ncell, byrow = TRUE) +
-               beta_g[1] +
                matrix(rep(coef_term, nclust),
                       ncol = nclust, byrow = FALSE)
   ) * data$s
 
   y_mat <- matrix(rep(y, nclust), ncol = nclust, byrow = FALSE)
   gr_m <- y_mat / m_g - (y_mat + phi_g) / (m_g + phi)
-  gr_delta <- gr_m * matrix(rep(exp(exp(delta_g)) * exp(delta_g) * markers, cell),
+  gr_delta <- gr_m * matrix(rep(exp(exp(delta_g)) * exp(delta_g) * rho, cell),
                             nrow = ncell, byrow = TRUE)
 
   gr_beta <- gr_m * exp(X %*% beta_g) * (X %*% beta_g)
@@ -96,6 +83,43 @@ Q_gr_g <- function(theta, y, gamma, data) {
 
   gr <- c(gr_delta, gr_beta, gr_phi)
   -gr
+}
+
+#' Computes map clone assignment given EM object
+#'
+#' @param em List returned by \code{inference_em}
+#' @return A vector of maximum likelihood clone assignments
+#' @keywords internal
+clone_assignment <- function(em) {
+  apply(em$gamma, 1, which.max)
+}
+
+#' @keywords internal
+log_likelihood <- function(theta, data) {
+  rho <- data$rho # Human-annotated cell type marker vector (length C)
+  X <- data$X # Covariates to regress on (P X (N+1))
+
+  nclust <- length(rho)
+
+  feat_dims <- dim(X)
+  ncoef <- feat_dims[1] + 1
+  ncell <- feat_dims[2]
+
+  delta_g <- theta[1:nclust]
+  beta_g <- theta[(nclust+1):(nclust+ncoef)]
+  phi_g <- theta[(nclust+ncoef+1)]
+
+  ll <- 0
+  Y_mat <- matrix(rep(data$Y, nclust), ncol = nclust, byrow = FALSE)
+
+  probs <- dnbinom2(Y_mat, mu = exp(matrix(rep(type_term, ncell),
+                                  nrow = ncell, byrow = TRUE) +
+                             matrix(rep(coef_term, nclust),
+                                    ncol = nclust, byrow = FALSE)
+  ) * data$s, size = phi_g)
+
+  ll <- ll + sum(logSumExp(probs))
+  ll
 }
 
 
@@ -176,34 +200,34 @@ cellassign_inference <- function(Y,
 
 # Stuff brought over from clonealign:
 
-#' #' @keywords internal
-#' likelihood_yn <- function(y, rho, s_n, params) {
-#'   m <- l * s_n * params[, 'mu']
-#'   phi <- params[, 'phi']
-#'   ll <- sum(dnbinom2(y, mu = m, size = phi))
-#'   ll
-#' }
+#' @keywords internal
+likelihood_yn <- function(y, rho, s_n, theta) {
+  m <- l * s_n * theta[, 'mu']
+  phi <- theta[, 'phi']
+  ll <- sum(dnbinom2(y, mu = m, size = phi))
+  ll
+}
+
+#' Computes gamma_{nc} = p(pi_n = c), returning
+#' N by C matrix
 #'
-#' #' Computes gamma_{nc} = p(pi_n = c), returning
-#' #' N by C matrix
-#' #'
-#' #' @importFrom matrixStats logSumExp
-#' #' @param data Input data
-#' #' @param params Model parameters
-#' #'
-#' #' @keywords internal
-#' #'
-#' #' @return The probability that each cell belongs to each clone, as a matrix
-#' p_pi <- function(data, params) {
-#'   gamma <- matrix(NA, nrow = data$N, ncol = data$C)
-#'   for(n in seq_len(data$N)) {
-#'     for(c in seq_len(data$C)) {
-#'       gamma[n,c] <- likelihood_yn(y = data$Y[n,],
-#'                                   l = data$L[,c],
-#'                                   s_n = data$s[n],
-#'                                   params = params)
-#'     }
-#'     gamma[n,] <- exp(gamma[n,] - logSumExp(gamma[n,]))
-#'   }
-#'   gamma
-#' }
+#' @importFrom matrixStats logSumExp
+#' @param data Input data
+#' @param theta Model parameters
+#'
+#' @keywords internal
+#'
+#' @return The probability that each cell belongs to each clone, as a matrix
+p_pi <- function(data, theta) {
+  gamma <- matrix(NA, nrow = data$N, ncol = data$C)
+  for(n in seq_len(data$N)) {
+    for(c in seq_len(data$C)) {
+      gamma[n,c] <- likelihood_yn(y = data$Y[n,],
+                                  l = data$L[,c],
+                                  s_n = data$s[n],
+                                  params = params)
+    }
+    gamma[n,] <- exp(gamma[n,] - logSumExp(gamma[n,]))
+  }
+  gamma
+}
