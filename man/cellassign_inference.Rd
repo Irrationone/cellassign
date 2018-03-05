@@ -4,12 +4,14 @@
 \alias{cellassign_inference}
 \title{Expectation-maximization for cellassign}
 \usage{
-cellassign_inference(Y, rho, X = NULL, max_em_iter = 100, rel_tol = 0.001,
-  multithread = FALSE, verbose = FALSE)
+cellassign_inference(Y, Y_full, rho, X = NULL, max_em_iter = 100,
+  rel_tol = 0.001, multithread = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{Y}{Input matrix of expression counts for N cells (rows)
 by G genes (columns)}
+
+\item{Y_full}{Full expression matrix (for size factor computation)}
 
 \item{rho}{Binary matrix of G rows and C columns where
 rho_{gc} = 1 if gene g is a marker for cell type c}

@@ -144,6 +144,7 @@ log_likelihood <- function(params, data) {
 #'
 #' @param Y Input matrix of expression counts for N cells (rows)
 #' by G genes (columns)
+#' @param Y_full Full expression matrix (for size factor computation)
 #' @param rho Binary matrix of G rows and C columns where
 #' rho_{gc} = 1 if gene g is a marker for cell type c
 #' @param X An N by (P-1) matrix of covariates *without* an intercept
@@ -152,6 +153,7 @@ log_likelihood <- function(params, data) {
 #' @export
 #'
 cellassign_inference <- function(Y,
+                                 Y_full,
                                  rho,
                                  X = NULL,
                                  max_em_iter = 100,
@@ -183,7 +185,7 @@ cellassign_inference <- function(Y,
   stopifnot(nrow(rho) == G)
 
   # Compute size factors for each cell
-  s <- scran::computeSumFactors(t(Y))
+  s <- scran::computeSumFactors(t(Y_full))
 
   # number of deltas we need to model
   n_delta <- sum(rho) # ignored
