@@ -195,7 +195,7 @@ cellassign_inference <- function(Y,
   # easily pass between functions
   params_list <- list(
     delta = matrix(1, nrow = G, ncol = C),
-    beta = matrix(0, nrow = G, ncol = P),
+    beta = matrix(1, nrow = G, ncol = P),
     phi = rep(1, G)
   )
 
