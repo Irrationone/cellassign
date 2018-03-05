@@ -23,16 +23,16 @@ dnbinom2 <- function(x, mu, size) {
 #'
 #' @param theta Parameters to optimize
 #' @param y Gene expression
-#' @param gamma Responsibility terms (expectation of clone assignments)
+#' @param gamma Responsibility terms (expectation of clone assignments), N-by-C
 #' @param data Data
 Q_g <- function(theta, y, gamma, data) {
   markers <- data$markers # Human-annotated cell type marker vector (length C)
-  X <- data$X # Covariates to regress on (P X N)
+  X <- data$X # Covariates to regress on (P X (N+1))
 
   nclust <- length(markers)
 
   feat_dims <- dim(X)
-  ncoef <- feat_dims[1] + 1
+  ncoef <- feat_dims[1]
   ncell <- feat_dims[2]
 
   # Slice parameter vector
@@ -41,12 +41,11 @@ Q_g <- function(theta, y, gamma, data) {
   phi_g <- theta[(nclust+ncoef+1)]
 
   type_term <- t(exp(delta_g) * markers)
-  coef_term <- X %*% as.matrix([beta_g[2:ncoef])
+  coef_term <- X %*% as.matrix([beta_g)
 
   # N X C matrix
   m_g <- exp(matrix(rep(type_term, ncell),
                     nrow = ncell, byrow = TRUE) +
-               beta_g[1] +
                matrix(rep(coef_term, nclust),
                       ncol = nclust, byrow = FALSE)
   ) * data$s
@@ -57,6 +56,47 @@ Q_g <- function(theta, y, gamma, data) {
   -qq
 }
 
+#' Gradient of Q(theta | theta^t) w.r.t. theta
+#'
+#'
+Q_gr_g <- function(theta, y, gamma, data) {
+  markers <- data$markers # Human-annotated cell type marker vector (length C)
+  X <- data$X # Covariates to regress on (P X (N+1))
+
+  nclust <- length(markers)
+
+  feat_dims <- dim(X)
+  ncoef <- feat_dims[1] + 1
+  ncell <- feat_dims[2]
+
+  delta_g <- theta[1:nclust]
+  beta_g <- theta[(nclust+1):(nclust+ncoef)]
+  phi_g <- theta[(nclust+ncoef+1)]
+
+  gr <- rep(0, length(theta))
+  m_g <- exp(matrix(rep(type_term, ncell),
+                    nrow = ncell, byrow = TRUE) +
+               beta_g[1] +
+               matrix(rep(coef_term, nclust),
+                      ncol = nclust, byrow = FALSE)
+  ) * data$s
+
+  y_mat <- matrix(rep(y, nclust), ncol = nclust, byrow = FALSE)
+  gr_m <- y_mat / m_g - (y_mat + phi_g) / (m_g + phi)
+  gr_delta <- gr_m * matrix(rep(exp(exp(delta_g)) * exp(delta_g) * markers, cell),
+                            nrow = ncell, byrow = TRUE)
+
+  gr_beta <- gr_m * exp(X %*% beta_g) * (X %*% beta_g)
+  gr_phi <- digamma(phi_g + y_mat) - digamma(phi_g) - y_mat / (phi_g + mu_g) +
+    log(phi_g) + 1 - log(phi_g + mu_g) - phi_g / (phi_g + mu_g)
+
+  gr_delta <- colSums(gr_delta * gamma)
+  gr_beta <- colSums(gr_beta * gamma)
+  gr_phi <- sum(gr_phi * gamma)
+
+  gr <- c(gr_delta, gr_beta, gr_phi)
+  -gr
+}
 
 
 #' Expectation-maximization for cellassign
