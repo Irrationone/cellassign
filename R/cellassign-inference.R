@@ -61,6 +61,9 @@ Q_gr_g <- function(theta, y, gamma, data) {
   beta_g <- theta[(nclust+1):(nclust+ncoef)]
   phi_g <- theta[(nclust+ncoef+1)]
 
+  type_term <- t(exp(delta_g) * rho)
+  coef_term <- X %*% as.matrix([beta_g)
+
   gr <- rep(0, length(theta))
   m_g <- exp(matrix(rep(type_term, ncell),
                     nrow = ncell, byrow = TRUE) +
@@ -112,11 +115,13 @@ log_likelihood <- function(theta, data) {
   ll <- 0
   Y_mat <- matrix(rep(data$Y, nclust), ncol = nclust, byrow = FALSE)
 
-  probs <- dnbinom2(Y_mat, mu = exp(matrix(rep(type_term, ncell),
-                                  nrow = ncell, byrow = TRUE) +
-                             matrix(rep(coef_term, nclust),
-                                    ncol = nclust, byrow = FALSE)
-  ) * data$s, size = phi_g)
+  m_g <- exp(matrix(rep(type_term, ncell),
+                    nrow = ncell, byrow = TRUE) +
+               matrix(rep(coef_term, nclust),
+                      ncol = nclust, byrow = FALSE)
+  ) * data$s
+
+  probs <- dnbinom2(Y_mat, mu = m_g, size = phi_g)
 
   ll <- ll + sum(logSumExp(probs))
   ll
@@ -198,18 +203,38 @@ cellassign_inference <- function(Y,
 
 }
 
-# Stuff brought over from clonealign:
 
 #' @keywords internal
-likelihood_yn <- function(y, rho, s_n, theta) {
-  m <- l * s_n * theta[, 'mu']
-  phi <- theta[, 'phi']
-  ll <- sum(dnbinom2(y, mu = m, size = phi))
+likelihood_y <- function(y, rho, s, theta, X) {
+  nclust <- length(rho)
+
+  feat_dims <- dim(X)
+  ncoef <- feat_dims[1] + 1
+  ncell <- feat_dims[2]
+
+  delta_g <- theta[1:nclust]
+  beta_g <- theta[(nclust+1):(nclust+ncoef)]
+  phi_g <- theta[(nclust+ncoef+1)]
+
+  type_term <- t(exp(delta_g) * rho)
+  coef_term <- X %*% as.matrix([beta_g)
+
+  Y_mat <- matrix(rep(y, nclust), ncol = nclust, byrow = FALSE)
+
+  m_g <- exp(matrix(rep(type_term, ncell),
+                           nrow = ncell, byrow = TRUE) +
+                      matrix(rep(coef_term, nclust),
+                             ncol = nclust, byrow = FALSE)
+  ) * s
+
+  probs <- dnbinom2(Y_mat, mu = m_g, size = phi_g)
+
+  ll <- sum(probs)
   ll
 }
 
 #' Computes gamma_{nc} = p(pi_n = c), returning
-#' N by C matrix
+#' N by C matrix of responsibilities
 #'
 #' @importFrom matrixStats logSumExp
 #' @param data Input data
@@ -217,17 +242,16 @@ likelihood_yn <- function(y, rho, s_n, theta) {
 #'
 #' @keywords internal
 #'
-#' @return The probability that each cell belongs to each clone, as a matrix
+#' @return The probability that each cell belongs to each cell type, as a matrix
 p_pi <- function(data, theta) {
-  gamma <- matrix(NA, nrow = data$N, ncol = data$C)
-  for(n in seq_len(data$N)) {
-    for(c in seq_len(data$C)) {
-      gamma[n,c] <- likelihood_yn(y = data$Y[n,],
-                                  l = data$L[,c],
-                                  s_n = data$s[n],
-                                  params = params)
-    }
-    gamma[n,] <- exp(gamma[n,] - logSumExp(gamma[n,]))
-  }
+
+  gamma <- likelihood_y(y = data$Y,
+                        rho = data$rho,
+                        s = data$s,
+                        theta = theta,
+                        X = data$X)
+  gamma_totals <- apply(gamma, 1, function(x) logSumExp(x))
+  gamma <- exp(gamma - gamma_totals)
+
   gamma
 }
