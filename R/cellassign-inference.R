@@ -1,4 +1,24 @@
 
+#' Extracts parameters from array
+#'
+#' @internal
+#'
+slice_parameters <- function(pars, rho, X) {
+  nclust <- length(rho)
+  rho_i <- which(rho == 1)
+
+  feat_dims <- dim(X)
+  ncoef <- feat_dims[2]
+  ncell <- feat_dims[1]
+
+  delta_g <- rep(0, nclust)
+  delta_g[rho_i] <- pars[1:length(rho_i)]
+  beta_g <- pars[(length(rho_i)+1):(length(rho_i)+ncoef)]
+  phi_g <- pars[(length(rho_i)+ncoef+1)]
+
+  list(delta=delta_g, beta=beta_g, phi=phi_g, rho_i=rho_i)
+}
+
 #' @keywords internal
 #' @importFrom stats dnbinom
 dnbinom2 <- function(x, mu, size) {
@@ -16,17 +36,14 @@ dnbinom2 <- function(x, mu, size) {
 Q_g <- function(pars, y, rho, gamma, data) {
   X <- data$X # Covariates to regress on N X P
 
+  parres <- slice_parameters(pars, rho, X)
+  delta_g <- parres$delta
+  beta_g <- parres$beta
+  phi_g <- parres$phi
+
   nclust <- length(rho)
-  rho_i <- which(rho == 1)
-
-  feat_dims <- dim(X)
-  ncoef <- feat_dims[2]
-  ncell <- feat_dims[1]
-
-  delta_g <- rep(0, nclust)
-  delta_g[rho_i] <- pars[1:length(rho_i)]
-  beta_g <- pars[(length(rho_i)+1):(length(rho_i)+ncoef)]
-  phi_g <- pars[(length(rho_i)+ncoef+1)]
+  ncoef <- dim(X)[2]
+  ncell <- dim(X)[1]
 
   type_term <- t(delta_g * rho)
   coef_term <- X %*% as.matrix(beta_g)
@@ -50,17 +67,15 @@ Q_g <- function(pars, y, rho, gamma, data) {
 Qgr_g <- function(pars, y, rho, gamma, data) {
   X <- data$X # Covariates to regress on N X P
 
+  parres <- slice_parameters(pars, rho, X)
+  delta_g <- parres$delta
+  beta_g <- parres$beta
+  phi_g <- parres$phi
+  rho_i <- parres$rho_i
+
   nclust <- length(rho)
-  rho_i <- which(rho == 1)
-
-  feat_dims <- dim(X)
-  ncoef <- feat_dims[2]
-  ncell <- feat_dims[1]
-
-  delta_g <- rep(0, nclust)
-  delta_g[rho_i] <- pars[1:length(rho_i)]
-  beta_g <- pars[(length(rho_i)+1):(length(rho_i)+ncoef)]
-  phi_g <- pars[(length(rho_i)+ncoef+1)]
+  ncoef <- dim(X)[2]
+  ncell <- dim(X)[1]
 
   type_term <- t(delta_g * rho)
   coef_term <- X %*% as.matrix(beta_g)
@@ -102,6 +117,7 @@ clone_assignment <- function(em) {
 #' @keywords internal
 #'
 #' Compute observed data log-likelihood
+#' Space inefficient (instantiates N X C X G array)
 #'
 #' TODO: Fix this. Doesn't iterate over genes at the moment.
 log_likelihood <- function(params, data) {
@@ -278,23 +294,43 @@ cellassign_inference <- function(Y,
     message("There were errors in optimization of Q function. However, results may still be valid. See errors above.")
   }
 
+  gamma <- p_pi(data, params)
+
+  pars_expanded <- lapply(seq_along(params), function(i) {
+    slice_parameters(params[[i]], rho = rho[i,], X = X)
+  })
+
+  deltas <- do.call(rbind, lapply(pars_expanded, function(x) x$delta))
+  betas <- do.call(rbind, lapply(pars_expanded, function(x) x$beta))
+  phi <- sapply(pars_expanded, function(x) x$phi)
+
+  rlist <- list(
+    gamma = gamma,
+    delta = deltas,
+    beta = betas,
+    phi = phi,
+    lls = lls
+  )
+
+  if(i == max_em_iter) {
+    message("Maximum number of iterations reached; consider increasing max_iter")
+  }
+  return(rlist)
+
 }
 
 
 #' @keywords internal
 #'
 likelihood_yg <- function(y, rho, s, params, X) {
+  parres <- slice_parameters(params, rho, X)
+  delta_g <- parres$delta
+  beta_g <- parres$beta
+  phi_g <- parres$phi
+
   nclust <- length(rho)
-  rho_i <- which(rho == 1)
-
-  feat_dims <- dim(X)
-  ncoef <- feat_dims[2]
-  ncell <- feat_dims[1]
-
-  delta_g <- rep(0, nclust)
-  delta_g[rho_i] <- params[1:length(rho_i)]
-  beta_g <- params[(length(rho_i)+1):(length(rho_i)+ncoef)]
-  phi_g <- params[(length(rho_i)+ncoef+1)]
+  ncoef <- dim(X)[2]
+  ncell <- dim(X)[1]
 
   type_term <- t(delta_g * rho)
   coef_term <- X %*% as.matrix(beta_g)
