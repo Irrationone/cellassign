@@ -1,7 +1,7 @@
 
 #' Extracts parameters from array
 #'
-#' @internal
+#' @keywords internal
 #'
 slice_parameters <- function(pars, rho, X) {
   nclust <- length(rho)
@@ -118,6 +118,8 @@ clone_assignment <- function(em) {
 #'
 #' Compute observed data log-likelihood
 #' Space inefficient (instantiates N X C X G array)
+#'
+#' @importFrom matrixStats logSumExp
 #'
 log_likelihood <- function(params, data) {
   ll <- 0
@@ -281,13 +283,13 @@ cellassign_inference <- function(Y,
     lls <- c(lls, ll)
 
     if(verbose) {
-      message(glue("{it} Current: {ll_old}\tNew: {ll}\tChange: {ll_diff}"))
+      message(glue::glue("{it} Current: {ll_old}\tNew: {ll}\tChange: {ll_diff}"))
     }
 
     if(!is.na(ll_diff)) {
       if(ll_diff < rel_tol) {
         if(verbose) {
-          message(glue("EM converged after {it} iterations"))
+          message(glue::glue("EM converged after {it} iterations"))
         }
         break
       }
