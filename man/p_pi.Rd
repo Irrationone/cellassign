@@ -20,4 +20,3 @@ Computes gamma_{nc} = p(pi_n = c), returning
 N by C matrix of responsibilities
 }
 \keyword{internal}
-

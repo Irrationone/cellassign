@@ -16,4 +16,3 @@ A vector of maximum likelihood clone assignments
 Computes map clone assignment given EM object
 }
 \keyword{internal}
-

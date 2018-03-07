@@ -17,7 +17,7 @@ by G genes (columns)}
 \item{rho}{Binary matrix of G rows and C columns where
 rho_{gc} = 1 if gene g is a marker for cell type c}
 
-\item{X}{An N by (P-1) matrix of covariates *without* an intercept}
+\item{X}{An N by (P-1) matrix of covariates \emph{without} an intercept}
 
 \item{max_em_iter}{Maximum number of EM iterations to perform}
 
@@ -26,4 +26,3 @@ rho_{gc} = 1 if gene g is a marker for cell type c}
 \description{
 Expectation-maximization for cellassign
 }
-

@@ -9,4 +9,3 @@ Qgr_g(pars, y, rho, gamma, data)
 \description{
 Gradient of Q(theta | theta^t) w.r.t. params
 }
-
