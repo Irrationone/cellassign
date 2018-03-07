@@ -4,6 +4,12 @@
 #' Given a list of cell types and marker genes, convert to a binary
 #' cell type by gene matrix required by cellassign.
 #'
+#' This function takes a list of marker genes and converts it to a binary
+#' cell type by gene matrix. The input list should be the same
+#' length as the number of cell types with names corresponding to cell types.
+#' Each element of the list should be a character vector of the genes corresponding
+#' to that cell type. There is no requirement for mutually-exclusive marker genes.
+#'
 #' @param marker_list A list where each entry is named by a cell type and
 #' contains a character vector of gene names belonging to that cell type
 #'
@@ -20,6 +26,13 @@
 #' @export
 marker_list_to_mat <- function(marker_list) {
   cell_types <- names(marker_list)
+
+  if(is.null(cell_types)) {
+    warning("Marker list has no cell type names - replacing with generics")
+    cell_types <- paste0("cell_type_", letters[seq_along(marker_list)])
+    names(marker_list) <- cell_types
+  }
+
   genes <- sort(unique(unlist(marker_list)))
 
   n_cell_types <- length(cell_types)
@@ -33,7 +46,8 @@ marker_list_to_mat <- function(marker_list) {
     mat[cell_type,] <- genes %in% marker_list[[cell_type]]
   }
 
-  mat
+  mat <- rbind(mat, `other` = 0)
 
+  mat
 }
 

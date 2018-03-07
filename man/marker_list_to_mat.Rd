@@ -18,6 +18,13 @@ a cell type and 0 otherwise
 Given a list of cell types and marker genes, convert to a binary
 cell type by gene matrix required by cellassign.
 }
+\details{
+This function takes a list of marker genes and converts it to a binary
+cell type by gene matrix. The input list should be the same
+length as the number of cell types with names corresponding to cell types.
+Each element of the list should be a character vector of the genes corresponding
+to that cell type. There is no requirement for mutually-exclusive marker genes.
+}
 \examples{
 marker_list <- list(
  `cell_type_1` = c("geneA", "geneB"),
