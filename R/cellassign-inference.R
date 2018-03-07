@@ -119,7 +119,6 @@ clone_assignment <- function(em) {
 #' Compute observed data log-likelihood
 #' Space inefficient (instantiates N X C X G array)
 #'
-#' TODO: Fix this. Doesn't iterate over genes at the moment.
 log_likelihood <- function(params, data) {
   ll <- 0
   gamma_full <- array(NA, dim = c(nrow(data$Y), ncol(data$rho),
