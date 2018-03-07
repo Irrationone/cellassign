@@ -4,8 +4,9 @@
 \alias{cellassign_inference}
 \title{Expectation-maximization for cellassign}
 \usage{
-cellassign_inference(Y, Y_full, rho, X = NULL, max_em_iter = 100,
-  rel_tol = 0.001, multithread = FALSE, verbose = FALSE)
+cellassign_inference(Y, Y_full, rho, X = NULL, s = NULL,
+  max_em_iter = 100, rel_tol = 0.001, multithread = FALSE,
+  verbose = FALSE, bp_param = BiocParallel::bpparam())
 }
 \arguments{
 \item{Y}{Input matrix of expression counts for N cells (rows)

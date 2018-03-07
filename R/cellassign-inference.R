@@ -156,10 +156,12 @@ cellassign_inference <- function(Y,
                                  Y_full,
                                  rho,
                                  X = NULL,
+                                 s = NULL,
                                  max_em_iter = 100,
                                  rel_tol = 0.001,
                                  multithread = FALSE,
-                                 verbose = FALSE) {
+                                 verbose = FALSE,
+                                 bp_param = BiocParallel::bpparam()) {
 
   # TODO: change Y to include SingleCellExperiment
   stopifnot(is.matrix(Y))
@@ -185,7 +187,9 @@ cellassign_inference <- function(Y,
   stopifnot(nrow(rho) == G)
 
   # Compute size factors for each cell
-  s <- scran::computeSumFactors(t(Y_full))
+  if (is.null(s)) {
+    s <- scran::computeSumFactors(t(Y_full))
+  }
 
   # number of deltas we need to model
   n_delta <- sum(rho) # ignored
@@ -314,7 +318,7 @@ cellassign_inference <- function(Y,
     lls = lls
   )
 
-  if(i == max_em_iter) {
+  if(it == max_em_iter) {
     message("Maximum number of iterations reached; consider increasing max_iter")
   }
   return(rlist)
