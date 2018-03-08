@@ -5,6 +5,11 @@ Description: What the package does (one paragraph).
 Authors@R: person("First", "Last", , "first.last@example.com", c("aut", "cre"))
 License: Apache License (>= 2.0)
 Encoding: UTF-8
+Imports:
+    methods,
+    stats,
+    matrixStats,
+    glue
 LazyData: true
 ByteCompile: true
 Roxygen: list(markdown = TRUE)

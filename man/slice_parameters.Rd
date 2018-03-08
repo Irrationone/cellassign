@@ -9,4 +9,5 @@ slice_parameters(pars, rho, X)
 \description{
 Extracts parameters from array
 }
+\keyword{internal}
 

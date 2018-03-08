@@ -14,6 +14,8 @@ p_pi(data, params)
 }
 \value{
 The probability that each cell belongs to each cell type, as a matrix
+
+TODO: make this p_pi for each cell in order to parallelize
 }
 \description{
 Computes gamma_{nc} = p(pi_n = c), returning

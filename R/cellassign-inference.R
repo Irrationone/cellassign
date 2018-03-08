@@ -1,7 +1,7 @@
 
 #' Extracts parameters from array
 #'
-#' @internal
+#' @keywords internal
 #'
 slice_parameters <- function(pars, rho, X) {
   nclust <- length(rho)
@@ -123,6 +123,8 @@ clone_assignment <- function(em) {
 #' Compute observed data log-likelihood
 #' Space inefficient (instantiates N X C X G array)
 #'
+#' @importFrom matrixStats logSumExp
+#'
 log_likelihood <- function(params, data) {
   ll <- 0
   gamma_full <- array(NA, dim = c(nrow(data$Y), ncol(data$rho),
@@ -147,7 +149,6 @@ log_likelihood <- function(params, data) {
 #'
 #' @param Y Input matrix of expression counts for N cells (rows)
 #' by G genes (columns)
-#' @param Y_full Full expression matrix (for size factor computation)
 #' @param rho Binary matrix of G rows and C columns where
 #' rho_{gc} = 1 if gene g is a marker for cell type c
 #' @param X An N by (P-1) matrix of covariates *without* an intercept
@@ -156,10 +157,9 @@ log_likelihood <- function(params, data) {
 #' @export
 #'
 cellassign_inference <- function(Y,
-                                 Y_full,
                                  rho,
-                                 X = NULL,
                                  s = NULL,
+                                 X = NULL,
                                  max_em_iter = 100,
                                  rel_tol = 0.001,
                                  multithread = FALSE,
@@ -169,8 +169,19 @@ cellassign_inference <- function(Y,
   # TODO: change Y to include SingleCellExperiment
   stopifnot(is.matrix(Y))
   stopifnot(is.matrix(rho))
+
+  if(is.null(rownames(rho))) {
+    warning("No gene names supplied - replacing with generics")
+    rownames(rho) <- paste0("gene_", seq_along(nrow(rho)))
+  }
+  if(is.null(colnames(rho))) {
+    warning("No cell type names supplied - replacing with generics")
+    rownames(rho) <- paste0("cell_type_", seq_along(ncol(rho)))
+  }
+
+
   if(!is.null(X)) {
-    stopifnot(is.matrix(S))
+    stopifnot(is.matrix(X))
   }
 
   N <- nrow(Y)
@@ -190,12 +201,9 @@ cellassign_inference <- function(Y,
   stopifnot(nrow(rho) == G)
 
   # Compute size factors for each cell
-  if (is.null(s)) {
-    s <- scran::computeSumFactors(t(Y_full))
-  }
-
-  # number of deltas we need to model
-  n_delta <- sum(rho) # ignored
+  # if (is.null(s)) {
+  #   s <- scran::computeSumFactors(t(Y_full))
+  # }
 
 
   # Store both data and parameters we have in lists to
@@ -220,6 +228,7 @@ cellassign_inference <- function(Y,
 
   data <- list(
     Y = Y,
+    G = G,
     rho = rho,
     s = s,
     X = X
@@ -256,23 +265,31 @@ cellassign_inference <- function(Y,
         c(opt$par, -opt$value)
       }, BPPARAM = bp_param)
     } else {
-      pnew <- lapply(seq_len(ncol(data$Y)), function(g) {
+      n_optim_errors <- 0
+      genes_opt_failed <- NULL
+      pnew <- lapply(seq_len(data$G), function(g) {
         num_deltas <- length(which(rho[g,] == 1))
+
         opt <- optim(par = params[[g]],
                      fn = Q_g,
-                     gr = Qgr_g,
+                     # gr = Qgr_g,
                      y = data$Y[,g], rho = rho[g,], gamma = gamma, data = data,
                      method = "L-BFGS-B",
-                     lower = c(rep(1e-10, num_deltas), rep(-1e10, P), 1e-10),
-                     upper = c(rep(max(data$Y), num_deltas), rep(1e10, P), 1e6),
+                     lower = c(rep(1e-10, num_deltas), rep(-100, P), 1e-10),
+                     upper = c(rep(100, num_deltas), rep(100, P), 1e6),
                      control = list())
         if(opt$convergence != 0) {
-          warning(glue::glue("L-BFGS-B optimization of Q function warning: {opt$message}"))
+          n_optim_errors <<- n_optim_errors + 1
+          genes_opt_failed <<- c(genes_opt_failed, g)
+          # warning(glue::glue("L-BFGS-B optimization of Q function warning: {opt$message}"))
           any_optim_errors <- TRUE
         }
         c(opt$par, -opt$value)
       })
     }
+
+    #print(glue::glue("Number of opt errors: {n_optim_errors}"))
+    print(glue::glue("Genes failed: {genes_opt_failed}"))
 
     #pnew <- do.call(rbind, pnew)
     #params <- pnew[,c('mu', 'phi')]
@@ -285,13 +302,13 @@ cellassign_inference <- function(Y,
     lls <- c(lls, ll)
 
     if(verbose) {
-      message(glue("{it} Current: {ll_old}\tNew: {ll}\tChange: {ll_diff}"))
+      message(glue::glue("{it} Current: {ll_old}\tNew: {ll}\tChange: {ll_diff}"))
     }
 
     if(!is.na(ll_diff)) {
       if(ll_diff < rel_tol) {
         if(verbose) {
-          message(glue("EM converged after {it} iterations"))
+          message(glue::glue("EM converged after {it} iterations"))
         }
         break
       }
@@ -305,6 +322,8 @@ cellassign_inference <- function(Y,
 
   gamma <- p_pi(data, params)
 
+  colnames(gamma) <- colnames(rho) # Give gamma cell type names
+
   pars_expanded <- lapply(seq_along(params), function(i) {
     slice_parameters(params[[i]], rho = rho[i,], X = X)
   })
@@ -313,12 +332,19 @@ cellassign_inference <- function(Y,
   betas <- do.call(rbind, lapply(pars_expanded, function(x) x$beta))
   phi <- sapply(pars_expanded, function(x) x$phi)
 
-  rlist <- list(
+  mle_params <- list(
     gamma = gamma,
     delta = deltas,
     beta = betas,
     phi = phi,
     lls = lls
+  )
+
+  cell_type <- get_mle_cell_type(gamma)
+
+  rlist <- list(
+    cell_type = cell_type,
+    mle_params = mle_params
   )
 
   if(it == max_em_iter) {
@@ -367,6 +393,8 @@ likelihood_yg <- function(y, rho, s, params, X) {
 #' @keywords internal
 #'
 #' @return The probability that each cell belongs to each cell type, as a matrix
+#'
+#' TODO: make this p_pi for each cell in order to parallelize
 p_pi <- function(data, params) {
   gamma <- matrix(0, nrow = nrow(data$Y), ncol = ncol(data$rho))
   for (g in seq_len(ncol(data$Y))) {
