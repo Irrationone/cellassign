@@ -92,7 +92,11 @@ Qgr_g <- function(pars, y, rho, gamma, data) {
   gr_delta <- gr_m * matrix(rep(exp(delta_g * rho) * rho, ncell),
                             nrow = ncell, byrow = TRUE)
 
-  gr_beta <- rowSums(gr_m * gamma) * (exp(t(t(X) * beta_g)) * t(t(X) * beta_g))
+  gr_delta <- gr_delta * unname(data$s) * matrix(rep(exp(t(t(X) * beta_g)), nclust), ncol = nclust,
+                                              byrow = FALSE)
+
+  gr_beta <- unname(data$s) * rowSums(gr_m * gamma * matrix(rep(exp(delta_g * rho), ncell),
+                                                            nrow = ncell, byrow = TRUE)) * (exp(t(t(X) * beta_g)) * t(t(X) * beta_g))
   gr_phi <- digamma(phi_g + y_mat) - digamma(phi_g) - y_mat / (phi_g + m_g) +
     log(phi_g) + 1 - log(phi_g + m_g) - phi_g / (phi_g + m_g)
 
@@ -252,7 +256,7 @@ cellassign_inference <- function(Y,
         c(opt$par, -opt$value)
       }, BPPARAM = bp_param)
     } else {
-      pnew <- lapply(seq_len(data$G), function(g) {
+      pnew <- lapply(seq_len(ncol(data$Y)), function(g) {
         num_deltas <- length(which(rho[g,] == 1))
         opt <- optim(par = params[[g]],
                      fn = Q_g,
