@@ -10,4 +10,3 @@ slice_parameters(pars, rho, X)
 Extracts parameters from array
 }
 \keyword{internal}
-

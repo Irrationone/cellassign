@@ -19,4 +19,3 @@ Q_g(pars, y, rho, gamma, data)
 Q(theta | theta^t)
 }
 \keyword{internal}
-

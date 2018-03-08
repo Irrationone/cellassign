@@ -1,20 +1,13 @@
 # cellassign
 
-The goal of cellassign is to ...
+Probabilistic assignment of single-cell RNA-seq data to known cell types across millions of cells accounting for patient and batch specific effects.
+
 
 ## Installation
 
-You can install the released version of cellassign from [CRAN](https://CRAN.R-project.org) with:
+`cellassign` can be installed from github via
 
 ``` r
-install.packages("cellassign")
-```
-
-## Example
-
-This is a basic example which shows you how to solve a common problem:
-
-``` r
-## basic example code
+devtools::install_github("kieranrcampbell/cellassign")
 ```
 

@@ -2,5 +2,6 @@
 
 export(cellassign_inference)
 export(marker_list_to_mat)
+export(simulate_cellassign)
 importFrom(matrixStats,logSumExp)
 importFrom(stats,dnbinom)

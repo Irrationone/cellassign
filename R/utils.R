@@ -57,6 +57,8 @@ marker_list_to_mat <- function(marker_list, include_other = TRUE) {
   mat
 }
 
+#' Get MLE estimates of type of each cell
+#'
 #' @keywords internal
 get_mle_cell_type <- function(gamma) {
   which_max <- apply(gamma, 1, which.max)

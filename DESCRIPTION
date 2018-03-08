@@ -13,4 +13,4 @@ Imports:
 LazyData: true
 ByteCompile: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1
