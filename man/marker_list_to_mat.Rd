@@ -4,11 +4,14 @@
 \alias{marker_list_to_mat}
 \title{Convert a list of marker genes to a binary matrix}
 \usage{
-marker_list_to_mat(marker_list)
+marker_list_to_mat(marker_list, include_other = TRUE)
 }
 \arguments{
 \item{marker_list}{A list where each entry is named by a cell type and
 contains a character vector of gene names belonging to that cell type}
+
+\item{include_other}{If \code{TRUE} adds a column of zeros for cells that do not
+exhibit high expression of any marker gene to be binned into}
 }
 \value{
 A cell type by gene binary matrix with 1 if a gene is a marker for
@@ -20,7 +23,7 @@ cell type by gene matrix required by cellassign.
 }
 \details{
 This function takes a list of marker genes and converts it to a binary
-cell type by gene matrix. The input list should be the same
+gene by cell type matrix. The input list should be the same
 length as the number of cell types with names corresponding to cell types.
 Each element of the list should be a character vector of the genes corresponding
 to that cell type. There is no requirement for mutually-exclusive marker genes.
