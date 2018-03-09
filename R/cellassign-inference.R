@@ -284,7 +284,7 @@ cellassign_inference <- function(Y,
                      gr = Qgr_g,
                      y = data$Y[,g], rho = rho[g,], gamma = gamma, data = data,
                      method = "L-BFGS-B",
-                     lower = c(rep(1e-10, num_deltas), rep(100, P), 1e-6),
+                     lower = c(rep(1e-10, num_deltas), rep(-100, P), 1e-6),
                      upper = c(rep(100, num_deltas), rep(100, P), 1e6),
                      control = list())
         if(opt$convergence != 0) {
