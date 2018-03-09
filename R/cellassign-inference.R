@@ -92,11 +92,11 @@ Qgr_g <- function(pars, y, rho, gamma, data) {
   gr_delta <- gr_m * matrix(rep(exp(delta_g * rho) * rho, ncell),
                             nrow = ncell, byrow = TRUE)
 
-  gr_delta <- gr_delta * unname(data$s) * matrix(rep(exp(t(t(X) * beta_g)), nclust), ncol = nclust,
+  gr_delta <- gr_delta * unname(data$s) * matrix(rep(exp(rowSums(t(t(X) * beta_g))), nclust), ncol = nclust,
                                               byrow = FALSE)
 
   gr_beta <- unname(data$s) * rowSums(gr_m * gamma * matrix(rep(exp(delta_g * rho), ncell),
-                                                            nrow = ncell, byrow = TRUE)) * (exp(t(t(X) * beta_g)) * t(t(X)))
+                                                            nrow = ncell, byrow = TRUE)) * exp(rowSums(t(t(X) * beta_g))) * X
 
   gr_phi <- digamma(phi_g + y_mat) - digamma(phi_g) - y_mat / (phi_g + m_g) +
     log(phi_g) + 1 - log(phi_g + m_g) - phi_g / (phi_g + m_g)
@@ -284,8 +284,8 @@ cellassign_inference <- function(Y,
                      gr = Qgr_g,
                      y = data$Y[,g], rho = rho[g,], gamma = gamma, data = data,
                      method = "L-BFGS-B",
-                     lower = c(rep(1e-10, num_deltas), rep(-100, P), 1e-6),
-                     upper = c(rep(10, num_deltas), rep(100, P), 100),
+                     lower = c(rep(1e-10, num_deltas), rep(-1e4, P), 1e-6),
+                     upper = c(rep(100, num_deltas), rep(100, P), 1e6),
                      control = list())
         if(opt$convergence != 0) {
           n_optim_errors <<- n_optim_errors + 1
