@@ -92,8 +92,10 @@ Qgr_g <- function(pars, y, rho, gamma, data) {
   gr_delta <- gr_m * matrix(rep(exp(delta_g * rho) * rho, ncell),
                             nrow = ncell, byrow = TRUE)
 
-  gr_delta <- gr_delta * unname(data$s) * matrix(rep(exp(t(t(X) * beta_g)), nclust), ncol = nclust,
-                                              byrow = FALSE)
+  xx <- exp(t(t(X) * beta_g))
+  m <- matrix(rep(rowSums(xx), nclust), nrow = N) # Per cell
+
+  gr_delta <- gr_delta * unname(data$s) * m
 
   gr_beta <- unname(data$s) * rowSums(gr_m * gamma * matrix(rep(exp(delta_g * rho), ncell),
                                                             nrow = ncell, byrow = TRUE)) * (exp(t(t(X) * beta_g)) * t(t(X)))
