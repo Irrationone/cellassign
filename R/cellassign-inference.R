@@ -96,7 +96,7 @@ Qgr_g <- function(pars, y, rho, gamma, data) {
                                               byrow = FALSE)
 
   gr_beta <- unname(data$s) * rowSums(gr_m * gamma * matrix(rep(exp(delta_g * rho), ncell),
-                                                            nrow = ncell, byrow = TRUE)) * (exp(t(t(X) * beta_g)) * t(t(X) * beta_g))
+                                                            nrow = ncell, byrow = TRUE)) * (exp(t(t(X) * beta_g)) * t(t(X)))
 
   gr_phi <- digamma(phi_g + y_mat) - digamma(phi_g) - y_mat / (phi_g + m_g) +
     log(phi_g) + 1 - log(phi_g + m_g) - phi_g / (phi_g + m_g)
@@ -166,7 +166,8 @@ cellassign_inference <- function(Y,
                                  rel_tol = 0.001,
                                  multithread = FALSE,
                                  verbose = FALSE,
-                                 bp_param = BiocParallel::bpparam()) {
+                                 bp_param = BiocParallel::bpparam(),
+                                 use_gradient = TRUE) {
 
   # TODO: change Y to include SingleCellExperiment
   stopifnot(is.matrix(Y))
@@ -174,11 +175,11 @@ cellassign_inference <- function(Y,
 
   if(is.null(rownames(rho))) {
     warning("No gene names supplied - replacing with generics")
-    rownames(rho) <- paste0("gene_", seq_along(nrow(rho)))
+    rownames(rho) <- paste0("gene_", seq_len(nrow(rho)))
   }
   if(is.null(colnames(rho))) {
     warning("No cell type names supplied - replacing with generics")
-    rownames(rho) <- paste0("cell_type_", seq_along(ncol(rho)))
+    colnames(rho) <- paste0("cell_type_", seq_len(ncol(rho)))
   }
 
 
@@ -242,6 +243,10 @@ cellassign_inference <- function(Y,
 
   any_optim_errors <- FALSE
 
+  if (!use_gradient) {
+    Qgr_g <- NULL
+  }
+
   # EM algorithm
 
   for(it in seq_len(max_em_iter)) {
@@ -269,12 +274,14 @@ cellassign_inference <- function(Y,
     } else {
       n_optim_errors <- 0
       genes_opt_failed <- NULL
+
       pnew <- lapply(seq_len(data$G), function(g) {
         num_deltas <- length(which(rho[g,] == 1))
 
+
         opt <- optim(par = params[[g]],
                      fn = Q_g,
-                     # gr = Qgr_g,
+                     gr = Qgr_g,
                      y = data$Y[,g], rho = rho[g,], gamma = gamma, data = data,
                      method = "L-BFGS-B",
                      lower = c(rep(1e-10, num_deltas), rep(-100, P), 1e-6),
