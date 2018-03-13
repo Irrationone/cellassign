@@ -176,6 +176,65 @@ p_pi_nb <- function(data, params) {
   gamma
 }
 
+#' This is the same as p_pi_nb but parallel over cells,
+#' which should speed up computation as datasets become large
+#'
+#' @export
+p_pi_nb2 <- function(data, params, multithread, bp_param) {
+  gamma <- matrix(0, nrow = nrow(data$Y), ncol = ncol(data$rho))
+
+  # We can precompute the G by C matrix delta * rho
+  parres_list <- lapply(seq_len(data$G), function(g) slice_parameters_nb(params[[g]], rho[g,], X))
+  delta_mat <- t(sapply(parres_list, `[[`, "delta"))
+
+  beta_mat <- sapply(parres_list, `[[`, "beta")
+  if(is.vector(beta_mat)) {
+    beta_mat <- matrix(beta_mat, nrow = data$G)
+  }
+
+  delta_times_rho <- delta_mat * rho
+  log_s <- log(data$s)
+
+  phi <- sapply(parres_list, `[[`, "phi")
+
+  lik_func <- function(n) likelihood_yn_nb(y_n = data$Y[n,],
+                                           delta_times_rho,
+                                           beta_mat,
+                                           log_s_n = log_s[n],
+                                           phi,
+                                           x_n = data$X[n,,drop=FALSE])
+
+  # This can parallelize across n
+  if(multithread) {
+    gamma <- do.call('rbind', BiocParallel::bplapply(seq_len(data$N), lik_func, BPPARAM = bp_param))
+  } else {
+    for(n in seq_len(data$N)) {
+      gamma[n,] <- lik_func(n)
+    }
+  }
+
+  gamma_totals <- apply(gamma, 1, function(x) logSumExp(x))
+  gamma <- exp(gamma - gamma_totals)
+
+  gamma
+}
+
+#' @export
+likelihood_yn_nb <- function(y_n,
+                             delta_times_rho,
+                             beta_mat,
+                             log_s_n,
+                             phi,
+                             x_n) {
+  G <- length(y_n)
+  log_prob_n <- sapply(seq_len(G), function(g) {
+    mu <- exp(log_s_n + sum(beta_mat[g,,drop = FALSE] * x_n) + delta_times_rho[g,])
+    dnbinom2(y_n[g], mu, phi[g])
+  })
+  rowSums(log_prob_n)
+}
+
+
 #' @keywords internal
 #'
 likelihood_yg_nb <- function(y, rho, s, params, X) {
@@ -203,6 +262,7 @@ likelihood_yg_nb <- function(y, rho, s, params, X) {
 
   ll
 }
+
 
 
 
@@ -255,6 +315,9 @@ cellassign_inference_nb <- function(Y,
   data <- list(
     Y = Y,
     G = G,
+    N = N,
+    P = P,
+    C = C,
     rho = rho,
     s = s,
     X = X
@@ -271,50 +334,36 @@ cellassign_inference_nb <- function(Y,
 
   for(it in seq_len(max_em_iter)) {
     # E-step
-    gamma <- p_pi_nb(data, params)
+    gamma <- p_pi_nb2(data, params, multithread, bp_param)
+
+    # Define a call for optimization, that can be used either in a simply lapply
+    # or in a parallelized bplapply
+    optim_call <- function(g) {
+      num_deltas <- length(which(rho[g,] == 1))
+      opt <- optim(par = params[[g]],
+                   fn = Q_g_nb,
+                   gr = Qgr_g_nb,
+                   y = data$Y[,g], rho = rho[g,], gamma = gamma, data = data,
+                   method = "L-BFGS-B",
+                   lower = c(rep(1e-10, num_deltas), rep(-100, P), 1e-6),
+                   upper = c(rep(100, num_deltas), rep(100, P), 1e6),
+                   control = list())
+      if(opt$convergence != 0) {
+        n_optim_errors <<- n_optim_errors + 1
+        genes_opt_failed <<- c(genes_opt_failed, g)
+        any_optim_errors <- TRUE
+      }
+      c(opt$par, -opt$value)
+    }
+
+    n_optim_errors <- 0
+    genes_opt_failed <- NULL
 
     # M-step
     if(multithread) {
-      pnew <- BiocParallel::bplapply(seq_len(ncol(data$Y)), function(g) {
-        num_deltas <- length(which(rho[g,] == 1))
-        opt <- optim(par = params[[g]],
-                     fn = Q_g_nb,
-                     gr = Qgr_g_nb,
-                     y = data$Y[,g], rho = rho[g,], gamma = gamma, data = data,
-                     method = "L-BFGS-B",
-                     lower = c(rep(1e-10, num_deltas), rep(-1e10, P), 1e-1),
-                     upper = c(rep(max(data$Y), num_deltas), rep(1e10, P), 1e6),
-                     control = list())
-        if(opt$convergence != 0) {
-          warning(glue::glue("L-BFGS-B optimization of Q function warning: {opt$message}"))
-          any_optim_errors <- TRUE
-        }
-        c(opt$par, -opt$value)
-      }, BPPARAM = bp_param)
+      pnew <- BiocParallel::bplapply(seq_len(data$G), optim_call, BPPARAM = bp_param)
     } else {
-      n_optim_errors <- 0
-      genes_opt_failed <- NULL
-
-      pnew <- lapply(seq_len(data$G), function(g) {
-        num_deltas <- length(which(rho[g,] == 1))
-
-
-        opt <- optim(par = params[[g]],
-                     fn = Q_g_nb,
-                     gr = Qgr_g_nb,
-                     y = data$Y[,g], rho = rho[g,], gamma = gamma, data = data,
-                     method = "L-BFGS-B",
-                     lower = c(rep(1e-10, num_deltas), rep(-100, P), 1e-6),
-                     upper = c(rep(100, num_deltas), rep(100, P), 1e6),
-                     control = list())
-        if(opt$convergence != 0) {
-          n_optim_errors <<- n_optim_errors + 1
-          genes_opt_failed <<- c(genes_opt_failed, g)
-          # warning(glue::glue("L-BFGS-B optimization of Q function warning: {opt$message}"))
-          any_optim_errors <- TRUE
-        }
-        c(opt$par, -opt$value)
-      })
+      pnew <- lapply(seq_len(data$G), optim_call)
     }
 
     print(glue::glue("Genes failed: {genes_opt_failed}"))
@@ -347,7 +396,7 @@ cellassign_inference_nb <- function(Y,
     message("There were errors in optimization of Q function. However, results may still be valid. See errors above.")
   }
 
-  gamma <- p_pi_nb(data, params)
+  gamma <- p_pi_nb2(data, params, multithread, bp_param)
 
   colnames(gamma) <- colnames(rho) # Give gamma cell type names
 
