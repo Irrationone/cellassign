@@ -59,7 +59,7 @@ cellassign <- function(exprs_obj,
     # We can be a little intelligent about whether or not to add an intercept -
     # if any column variance of X is 0 then the associated covariate is constant
     # so we don't need to add an intercept
-    col_vars <- apply(X, 1, var)
+    col_vars <- apply(X, 2, var)
     if(any(col_vars == 0)) {
       if(verbose) {
         message("Intecept column detected in X")
