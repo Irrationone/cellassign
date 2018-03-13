@@ -3,7 +3,7 @@
 #'
 #' @keywords internal
 #'
-slice_parameters <- function(pars, rho, X) {
+slice_parameters_nb <- function(pars, rho, X) {
   nclust <- length(rho)
   rho_i <- which(rho == 1)
 
@@ -33,10 +33,10 @@ dnbinom2 <- function(x, mu, size) {
 #' @param y Gene expression
 #' @param gamma Responsibility terms (expectation of clone assignments), N-by-C
 #' @param data Data
-Q_g <- function(pars, y, rho, gamma, data) {
+Q_g_nb <- function(pars, y, rho, gamma, data) {
   X <- data$X # Covariates to regress on N X P
 
-  parres <- slice_parameters(pars, rho, X)
+  parres <- slice_parameters_nb(pars, rho, X)
   delta_g <- parres$delta
   beta_g <- parres$beta
   phi_g <- parres$phi
@@ -64,10 +64,10 @@ Q_g <- function(pars, y, rho, gamma, data) {
 #' Gradient of Q(theta | theta^t) w.r.t. params
 #'
 #'
-Qgr_g <- function(pars, y, rho, gamma, data) {
+Qgr_g_nb <- function(pars, y, rho, gamma, data) {
   X <- data$X # Covariates to regress on N X P
 
-  parres <- slice_parameters(pars, rho, X)
+  parres <- slice_parameters_nb(pars, rho, X)
   delta_g <- parres$delta
   beta_g <- parres$beta
   phi_g <- parres$phi
@@ -127,12 +127,12 @@ clone_assignment <- function(em) {
 #'
 #' @importFrom matrixStats logSumExp
 #'
-log_likelihood <- function(params, data) {
+log_likelihood_nb <- function(params, data) {
   ll <- 0
   gamma_full <- array(NA, dim = c(nrow(data$Y), ncol(data$rho),
                                   ncol(data$Y)))
   for (g in seq_len(ncol(data$Y))) {
-    gamma_ncg <- likelihood_yg(y = data$Y[,g],
+    gamma_ncg <- likelihood_yg_nb(y = data$Y[,g],
                              rho = data$rho[g,],
                              s = data$s,
                              params = params[[g]],
@@ -147,6 +147,65 @@ log_likelihood <- function(params, data) {
 }
 
 
+#' Computes gamma_{nc} = p(pi_n = c), returning
+#' N by C matrix of responsibilities
+#'
+#' @importFrom matrixStats logSumExp
+#' @param data Input data
+#' @param params Model parameters
+#'
+#' @keywords internal
+#'
+#' @return The probability that each cell belongs to each cell type, as a matrix
+#'
+#' TODO: make this p_pi for each cell in order to parallelize
+p_pi_nb <- function(data, params) {
+  gamma <- matrix(0, nrow = nrow(data$Y), ncol = ncol(data$rho))
+  for (g in seq_len(ncol(data$Y))) {
+    gamma_g <- likelihood_yg_nb(y = data$Y[,g],
+                             rho = data$rho[g,],
+                             s = data$s,
+                             params = params[[g]],
+                             X = data$X)
+    gamma <- gamma + gamma_g
+  }
+
+  gamma_totals <- apply(gamma, 1, function(x) logSumExp(x))
+  gamma <- exp(gamma - gamma_totals)
+
+  gamma
+}
+
+#' @keywords internal
+#'
+likelihood_yg_nb <- function(y, rho, s, params, X) {
+  parres <- slice_parameters_nb(params, rho, X)
+  delta_g <- parres$delta
+  beta_g <- parres$beta
+  phi_g <- parres$phi
+
+  nclust <- length(rho)
+  ncoef <- dim(X)[2]
+  ncell <- dim(X)[1]
+
+  type_term <- t(delta_g * rho)
+  coef_term <- X %*% as.matrix(beta_g)
+
+  Y_mat <- matrix(rep(y, nclust), ncol = nclust, byrow = FALSE)
+
+  m_g <- exp(matrix(rep(type_term, ncell),
+                    nrow = ncell, byrow = TRUE) +
+               matrix(rep(coef_term, nclust),
+                      ncol = nclust, byrow = FALSE)
+  ) * s
+
+  ll <- dnbinom2(Y_mat, mu = m_g, size = phi_g)
+
+  ll
+}
+
+
+
 #' Expectation-maximization for cellassign
 #'
 #' @param Y Input matrix of expression counts for N cells (rows)
@@ -156,57 +215,21 @@ log_likelihood <- function(params, data) {
 #' @param X An N by (P-1) matrix of covariates *without* an intercept
 #' @param max_em_iter Maximum number of EM iterations to perform
 #' @param rel_tol Tolerance below which EM algorithm is considered converged
-#' @export
+#' @keywords internal
 #'
-cellassign_inference <- function(Y,
+cellassign_inference_nb <- function(Y,
                                  rho,
-                                 s = NULL,
-                                 X = NULL,
+                                 s,
+                                 X,
+                                 G,
+                                 C,
+                                 N,
+                                 P,
                                  max_em_iter = 100,
                                  rel_tol = 0.001,
                                  multithread = FALSE,
                                  verbose = FALSE,
-                                 bp_param = BiocParallel::bpparam(),
-                                 use_gradient = TRUE) {
-
-  # TODO: change Y to include SingleCellExperiment
-  stopifnot(is.matrix(Y))
-  stopifnot(is.matrix(rho))
-
-  if(is.null(rownames(rho))) {
-    warning("No gene names supplied - replacing with generics")
-    rownames(rho) <- paste0("gene_", seq_len(nrow(rho)))
-  }
-  if(is.null(colnames(rho))) {
-    warning("No cell type names supplied - replacing with generics")
-    colnames(rho) <- paste0("cell_type_", seq_len(ncol(rho)))
-  }
-
-
-  if(!is.null(X)) {
-    stopifnot(is.matrix(X))
-  }
-
-  N <- nrow(Y)
-
-  if(is.null(X)) {
-    X <- matrix(1, nrow = N)
-  } else {
-    X <- cbind(1, X)
-  }
-
-  G <- ncol(Y)
-  C <- ncol(rho)
-  P <- ncol(X)
-
-  # Check the dimensions add up
-  stopifnot(nrow(X) == N)
-  stopifnot(nrow(rho) == G)
-
-  # Compute size factors for each cell
-  # if (is.null(s)) {
-  #   s <- scran::computeSumFactors(t(Y_full))
-  # }
+                                 bp_param = BiocParallel::bpparam()) {
 
 
   # Store both data and parameters we have in lists to
@@ -237,29 +260,26 @@ cellassign_inference <- function(Y,
     X = X
   )
 
-  ll_old <- log_likelihood(params, data)
+  ll_old <- log_likelihood_nb(params, data)
 
   lls <- ll_old
 
   any_optim_errors <- FALSE
 
-  if (!use_gradient) {
-    Qgr_g <- NULL
-  }
 
   # EM algorithm
 
   for(it in seq_len(max_em_iter)) {
     # E-step
-    gamma <- p_pi(data, params)
+    gamma <- p_pi_nb(data, params)
 
     # M-step
     if(multithread) {
       pnew <- BiocParallel::bplapply(seq_len(ncol(data$Y)), function(g) {
         num_deltas <- length(which(rho[g,] == 1))
         opt <- optim(par = params[[g]],
-                     fn = Q_g,
-                     # gr = Qgr_g,
+                     fn = Q_g_nb,
+                     gr = Qgr_g_nb,
                      y = data$Y[,g], rho = rho[g,], gamma = gamma, data = data,
                      method = "L-BFGS-B",
                      lower = c(rep(1e-10, num_deltas), rep(-1e10, P), 1e-1),
@@ -280,8 +300,8 @@ cellassign_inference <- function(Y,
 
 
         opt <- optim(par = params[[g]],
-                     fn = Q_g,
-                     gr = Qgr_g,
+                     fn = Q_g_nb,
+                     gr = Qgr_g_nb,
                      y = data$Y[,g], rho = rho[g,], gamma = gamma, data = data,
                      method = "L-BFGS-B",
                      lower = c(rep(1e-10, num_deltas), rep(-100, P), 1e-6),
@@ -297,14 +317,12 @@ cellassign_inference <- function(Y,
       })
     }
 
-    #print(glue::glue("Number of opt errors: {n_optim_errors}"))
     print(glue::glue("Genes failed: {genes_opt_failed}"))
 
-    #pnew <- do.call(rbind, pnew)
-    #params <- pnew[,c('mu', 'phi')]
+    # Strip off the opt$values returned
     params <- lapply(pnew, function(x) x[1:(length(x)-1)])
 
-    ll <- log_likelihood(params, data)
+    ll <- log_likelihood_nb(params, data)
 
     ll_diff <- (ll - ll_old)  / abs(ll_old) * 100
 
@@ -329,12 +347,12 @@ cellassign_inference <- function(Y,
     message("There were errors in optimization of Q function. However, results may still be valid. See errors above.")
   }
 
-  gamma <- p_pi(data, params)
+  gamma <- p_pi_nb(data, params)
 
   colnames(gamma) <- colnames(rho) # Give gamma cell type names
 
   pars_expanded <- lapply(seq_along(params), function(i) {
-    slice_parameters(params[[i]], rho = rho[i,], X = X)
+    slice_parameters_nb(params[[i]], rho = rho[i,], X = X)
   })
 
   deltas <- do.call(rbind, lapply(pars_expanded, function(x) x$delta))
@@ -364,59 +382,4 @@ cellassign_inference <- function(Y,
 }
 
 
-#' @keywords internal
-#'
-likelihood_yg <- function(y, rho, s, params, X) {
-  parres <- slice_parameters(params, rho, X)
-  delta_g <- parres$delta
-  beta_g <- parres$beta
-  phi_g <- parres$phi
 
-  nclust <- length(rho)
-  ncoef <- dim(X)[2]
-  ncell <- dim(X)[1]
-
-  type_term <- t(delta_g * rho)
-  coef_term <- X %*% as.matrix(beta_g)
-
-  Y_mat <- matrix(rep(y, nclust), ncol = nclust, byrow = FALSE)
-
-  m_g <- exp(matrix(rep(type_term, ncell),
-                    nrow = ncell, byrow = TRUE) +
-               matrix(rep(coef_term, nclust),
-                      ncol = nclust, byrow = FALSE)
-  ) * s
-
-  ll <- dnbinom2(Y_mat, mu = m_g, size = phi_g)
-
-  ll
-}
-
-#' Computes gamma_{nc} = p(pi_n = c), returning
-#' N by C matrix of responsibilities
-#'
-#' @importFrom matrixStats logSumExp
-#' @param data Input data
-#' @param params Model parameters
-#'
-#' @keywords internal
-#'
-#' @return The probability that each cell belongs to each cell type, as a matrix
-#'
-#' TODO: make this p_pi for each cell in order to parallelize
-p_pi <- function(data, params) {
-  gamma <- matrix(0, nrow = nrow(data$Y), ncol = ncol(data$rho))
-  for (g in seq_len(ncol(data$Y))) {
-    gamma_g <- likelihood_yg(y = data$Y[,g],
-                             rho = data$rho[g,],
-                             s = data$s,
-                             params = params[[g]],
-                             X = data$X)
-    gamma <- gamma + gamma_g
-  }
-
-  gamma_totals <- apply(gamma, 1, function(x) logSumExp(x))
-  gamma <- exp(gamma - gamma_totals)
-
-  gamma
-}
