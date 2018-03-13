@@ -10,7 +10,12 @@ Imports:
     stats,
     matrixStats,
     glue
+Suggests: 
+    knitr,
+    rmarkdown,
+    BiocStyle
 LazyData: true
 ByteCompile: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.0.1
+VignetteBuilder: knitr

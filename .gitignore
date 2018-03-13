@@ -3,3 +3,4 @@
 .RData
 Rmd/
 data/
+inst/doc
