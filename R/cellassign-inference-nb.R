@@ -184,15 +184,18 @@ p_pi_nb2 <- function(data, params, multithread, bp_param) {
   gamma <- matrix(0, nrow = nrow(data$Y), ncol = ncol(data$rho))
 
   # We can precompute the G by C matrix delta * rho
-  parres_list <- lapply(seq_len(data$G), function(g) slice_parameters_nb(params[[g]], rho[g,], X))
+  parres_list <- lapply(seq_len(data$G), function(g) slice_parameters_nb(params[[g]], data$rho[g,], data$X))
   delta_mat <- t(sapply(parres_list, `[[`, "delta"))
 
   beta_mat <- sapply(parres_list, `[[`, "beta")
+
   if(is.vector(beta_mat)) {
     beta_mat <- matrix(beta_mat, nrow = data$G)
+  } else {
+    beta_mat <- t(beta_mat)
   }
 
-  delta_times_rho <- delta_mat * rho
+  delta_times_rho <- delta_mat * data$rho
   log_s <- log(data$s)
 
   phi <- sapply(parres_list, `[[`, "phi")
@@ -227,6 +230,7 @@ likelihood_yn_nb <- function(y_n,
                              phi,
                              x_n) {
   G <- length(y_n)
+
   log_prob_n <- sapply(seq_len(G), function(g) {
     mu <- exp(log_s_n + sum(beta_mat[g,,drop = FALSE] * x_n) + delta_times_rho[g,])
     dnbinom2(y_n[g], mu, phi[g])

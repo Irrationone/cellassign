@@ -1,6 +1,8 @@
 
 
 #' Assign cells to known cell types
+#' @importFrom methods is
+#' @importFrom SummarizedExperiment assays
 #' @export
 cellassign <- function(exprs_obj,
                        rho,
