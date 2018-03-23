@@ -5,9 +5,9 @@
 \title{Assign cells to known cell types}
 \usage{
 cellassign(exprs_obj, rho, s = NULL, X = NULL, data_type = c("RNAseq",
-  "MS"), max_em_iter = 100, rel_tol = 0.001, multithread = FALSE,
-  verbose = FALSE, bp_param = BiocParallel::bpparam(),
-  sce_assay = "counts")
+  "MS"), n_batches = 1, rel_tol_adam = 1e-04, rel_tol_em = 1e-04,
+  max_iter_adam = 1e+05, max_iter_em = 20, learning_rate = 0.1,
+  verbose = TRUE, sce_assay = "counts")
 }
 \description{
 Assign cells to known cell types

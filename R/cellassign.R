@@ -9,13 +9,15 @@ cellassign <- function(exprs_obj,
                        s = NULL,
                        X = NULL,
                        data_type = c("RNAseq", "MS"),
-                       max_em_iter = 100,
-                       rel_tol = 0.001,
-                       multithread = FALSE,
-                       verbose = FALSE,
-                       bp_param = BiocParallel::bpparam(),
+                       n_batches = 1,
+                       rel_tol_adam = 1e-4,
+                       rel_tol_em = 1e-4,
+                       max_iter_adam = 1e5,
+                       max_iter_em = 20,
+                       learning_rate = 0.1,
+                       verbose = TRUE,
                        sce_assay = "counts") {
-  
+
   # Get expression input
   if(is(exprs_obj, "SummarizedExperiment")) {
     if(!sce_assay %in% names(assays(exprs_obj))) {
@@ -27,18 +29,18 @@ cellassign <- function(exprs_obj,
   } else {
     stop("Input exprs_obj must either be an ExpressionSet or numeric matrix of gene expression")
   }
-  
-  # Check X is correct 
+
+  # Check X is correct
   if(!is.null(X)) {
     if(!(is.matrix(X) && is.numeric(X))) {
       stop("X must either be NULL or a numeric matrix")
     }
   }
-  
-  
+
+
   stopifnot(is.matrix(Y))
   stopifnot(is.matrix(rho))
-  
+
   if(is.null(rownames(rho))) {
     warning("No gene names supplied - replacing with generics")
     rownames(rho) <- paste0("gene_", seq_len(nrow(rho)))
@@ -47,14 +49,14 @@ cellassign <- function(exprs_obj,
     warning("No cell type names supplied - replacing with generics")
     colnames(rho) <- paste0("cell_type_", seq_len(ncol(rho)))
   }
-  
-  
+
+
   if(!is.null(X)) {
     stopifnot(is.matrix(X))
   }
-  
+
   N <- nrow(Y)
-  
+
   if(is.null(X)) {
     X <- matrix(1, nrow = N)
   } else {
@@ -73,27 +75,27 @@ cellassign <- function(exprs_obj,
       }
     }
   }
-  
+
   G <- ncol(Y)
   C <- ncol(rho)
   P <- ncol(X)
-  
+
   # Check the dimensions add up
   stopifnot(nrow(X) == N)
   stopifnot(nrow(rho) == G)
-  
+
   # Compute size factors for each cell
   if (is.null(s)) {
     message("No size factors supplied - computing from matrix. It is highly recommended to supply size factors calculated using the full gene set")
     s <- scran::computeSumFactors(t(Y))
   }
-  
-  
+
+
   res <- NULL
   data_type <- match.arg(data_type)
-  
+
   if(data_type == "RNAseq") {
-    res <- cellassign_inference_nb(Y = Y,
+    res <- inference_tensorflow(Y = Y,
                                 rho = rho,
                                 s = s,
                                 X = X,
@@ -101,17 +103,19 @@ cellassign <- function(exprs_obj,
                                 C = C,
                                 N = N,
                                 P = P,
-                                max_em_iter = max_em_iter,
-                                rel_tol = rel_tol,
-                                multithread = multithread,
                                 verbose = verbose,
-                                bp_param = BiocParallel::bpparam())
+                                n_batches = n_batches,
+                                rel_tol_adam = rel_tol_adam,
+                                rel_tol_em = rel_tol_em,
+                                max_iter_adam = max_iter_adam,
+                                max_iter_em = max_iter_em,
+                                learning_rate = learning_rate)
   }
   if(data_type == "MS") {
-    
+
   }
-  
+
   res
-  
+
 
 }
