@@ -2,12 +2,13 @@
 % Please edit documentation in R/inference-tensorflow.R
 \name{inference_tensorflow}
 \alias{inference_tensorflow}
-\title{cellassign inference in tensorflow}
+\title{cellassign inference in tensorflow, semi-supervised version}
 \usage{
-inference_tensorflow(Y, rho, s, X, G, C, N, P, verbose = FALSE,
-  n_batches = 1, rel_tol_adam = 1e-04, rel_tol_em = 1e-04,
-  max_iter_adam = 1e+05, max_iter_em = 20, learning_rate = 0.1)
+inference_tensorflow(Y, rho, s, X, G, C, N, P, Y0, s0, X0, N0, P0, gamma0,
+  verbose = FALSE, n_batches = 1, rel_tol_adam = 1e-04,
+  rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
+  learning_rate = 0.1)
 }
 \description{
-cellassign inference in tensorflow
+cellassign inference in tensorflow, semi-supervised version
 }
