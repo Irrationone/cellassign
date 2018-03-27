@@ -133,7 +133,19 @@ cellassign <- function(exprs_obj,
 
   }
 
-  res
+  structure(res, class = "cellassign_fit")
+}
 
-
+#' @export
+#' @importFrom glue glue
+print.cellassign_fit <- function(x) {
+  N <- nrow(x$mle_params$gamma)
+  C <- ncol(x$mle_params$gamma)
+  G <- nrow(x$mle_params$delta)
+  P <- ncol(x$mle_params$beta) - 1
+  cat(glue("A cellassign fit for {N} cells, {G} genes, {C} cell types with {P} covariates
+                   ",
+           "To access MLE cell types, call x$cell_type
+                  ",
+           "To access MLE parameter estimates, call x$mle_params"))
 }
