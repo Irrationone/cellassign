@@ -130,9 +130,8 @@ inference_tensorflow <- function(Y,
   # Marginal log likelihood for monitoring convergence
   eta_y = tf$reduce_sum(y_log_prob, 2L)
   L_y1 = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
-  L_y0 <- tf$einsum('nc,cng->', gamma_known, y0_log_prob)
 
-  L_y <- L_y1 + L_y0
+  L_y <- L_y1 - Q0
 
   # Split the data
   splits <- split(seq_len(N), seq_len(n_batches))
