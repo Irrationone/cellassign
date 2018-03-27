@@ -10,7 +10,9 @@ entry_stop_gradients <- function(target, mask) {
   tf$add(tf$stop_gradient(tf$multiply(mask_h, target)), tf$multiply(mask, target))
 }
 
-#' cellassign inference in tensorflow
+
+
+#' cellassign inference in tensorflow, semi-supervised version
 #'
 #' @import tensorflow
 #' @importFrom glue glue
@@ -22,6 +24,12 @@ inference_tensorflow <- function(Y,
                                  C,
                                  N,
                                  P,
+                                 Y0,
+                                 s0,
+                                 X0,
+                                 N0,
+                                 P0,
+                                 gamma0,
                                  verbose = FALSE,
                                  n_batches = 1,
                                  rel_tol_adam = 1e-4,
@@ -38,10 +46,16 @@ inference_tensorflow <- function(Y,
   s_ <- tf$placeholder(tf$float32, shape = shape(NULL), name = "s_")
   rho_ <- tf$placeholder(tf$float32, shape = shape(G,C), name = "rho_")
 
+  Y0_ <- tf$placeholder(tf$float32, shape = shape(NULL, G), name = "Y0_")
+  X0_ <- tf$placeholder(tf$float32, shape = shape(NULL, P0), name = "X0_")
+  s0_ <- tf$placeholder(tf$float32, shape = shape(NULL), name = "s0_")
+
   # Variables
   delta_log <- tf$Variable(-tf$ones(shape(G,C)))
   phi_log <- tf$Variable(tf$zeros(shape(G)))
   beta <- tf$Variable(tf$zeros(shape(G,P)))
+
+  beta0 <- tf$Variable(tf$zeros(shape(G,P0)))
 
   # Stop gradient for irrelevant entries of delta_log
   delta_log <- entry_stop_gradients(delta_log, tf$cast(rho_, tf$bool))
@@ -78,14 +92,47 @@ inference_tensorflow <- function(Y,
 
   gamma_fixed = tf$placeholder(dtype = tf$float32, shape = shape(NULL,C))
 
-  Q = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob)
+
+  ## Supervised part
+  base_mean0 <- tf$transpose(tf$einsum('np,gp->gn', X0_, beta0) + tf$log(s0_))
+
+  base_mean0_list <- list()
+  for(c in seq_len(C)) base_mean0_list[[c]] <- base_mean0
+  mu0_ngc = tf$add(tf$stack(base_mean0_list, 2), tf$multiply(delta, rho_), name = "adding_base_mean_to_delta_rho_supervised")
+  mu0_cng = tf$transpose(mu0_ngc, shape(2,0,1))
+
+  mu0_cng <- tf$exp(mu0_cng)
+
+  p0 = mu0_cng / (mu0_cng + phi)
+
+
+  nb_pdf0 <- tfd$NegativeBinomial(probs = p0, total_count = phi)
+
+  Y0_tensor_list <- list()
+  for(c in seq_len(C)) Y0_tensor_list[[c]] <- Y0_
+  Y0__ = tf$transpose(tf$stack(Y0_tensor_list, axis = 2), shape(2,0,1))
+
+  y0_log_prob <- nb_pdf0$log_prob(Y0__)
+
+  #gamma_known <- tf$constant(gamma0, dtype = tf$float32, shape = shape(N0,C))
+  gamma_known <- tf$placeholder(dtype = tf$float32, shape = shape(NULL,C))
+  ### End supervised part
+
+
+  Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob)
+  Q0 = -tf$einsum('nc,cng->', gamma_known, y0_log_prob)
+
+  Q = Q1 + Q0
 
   optimizer = tf$train$AdamOptimizer(learning_rate=learning_rate)
   train = optimizer$minimize(Q)
 
   # Marginal log likelihood for monitoring convergence
   eta_y = tf$reduce_sum(y_log_prob, 2L)
-  L_y = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
+  L_y1 = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
+  L_y0 <- tf$einsum('nc,cng->', gamma_known, y0_log_prob)
+
+  L_y <- L_y1 + L_y0
 
   # Split the data
   splits <- split(seq_len(N), seq_len(n_batches))
@@ -95,20 +142,20 @@ inference_tensorflow <- function(Y,
   init <- tf$global_variables_initializer()
   sess$run(init)
 
-  fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho)
+  fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0)
   log_liks <- ll_old <- sess$run(L_y, feed_dict = fd_full)
 
   for(i in seq_len(max_iter_em)) {
 
     ll <- 0 # log likelihood for this "epoch"
     for(b in seq_len(n_batches)) {
-      fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho)
+      fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0)
 
       # E-step
       g <- sess$run(gamma, feed_dict = fd)
 
       # M-step
-      gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, gamma_fixed = g)
+      gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, gamma_fixed = g)
 
       Q_old <- sess$run(Q, feed_dict = gfd)
       Q_diff <- rel_tol_adam + 1
@@ -119,13 +166,16 @@ inference_tensorflow <- function(Y,
         sess$run(train, feed_dict = gfd)
 
         if(mi %% 20 == 0) {
+          if (verbose) {
+            message(paste(mi, sess$run(Q1, feed_dict = gfd), sess$run(Q0, feed_dict = gfd), sep = " "))
+          }
           Q_new <- sess$run(Q, feed_dict = gfd)
           Q_diff = -(Q_new - Q_old) / abs(Q_old)
           Q_old <- Q_new
         }
       } # End gradient descent
 
-      l_new = sess$run(L_y, feed_dict = fd) # Log likelihood for this "epoch"
+      l_new = sess$run(L_y, feed_dict = fd_full) # Log likelihood for this "epoch"
       ll <- ll + l_new
     }
 
@@ -136,9 +186,9 @@ inference_tensorflow <- function(Y,
 
   # Finished EM - peel off final values
 
-  mle_params <- sess$run(list(delta, beta, phi, gamma), feed_dict = fd_full)
+  mle_params <- sess$run(list(delta, beta, phi, gamma, beta0), feed_dict = fd_full)
 
-  names(mle_params) <- c("delta", "beta", "phi", "gamma")
+  names(mle_params) <- c("delta", "beta", "phi", "gamma", "beta0")
 
   if(is.null(colnames(rho))) {
     colnames(rho) <- paste0("cell_type_", seq_len(ncol(rho)))
@@ -155,3 +205,4 @@ inference_tensorflow <- function(Y,
   return(rlist)
 
 }
+

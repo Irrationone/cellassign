@@ -8,6 +8,10 @@ cellassign <- function(exprs_obj,
                        rho,
                        s = NULL,
                        X = NULL,
+                       exprs_obj_known = NULL,
+                       s_known = NULL,
+                       X_known = NULL,
+                       known_types = NULL,
                        data_type = c("RNAseq", "MS"),
                        n_batches = 1,
                        rel_tol_adam = 1e-4,
@@ -19,15 +23,12 @@ cellassign <- function(exprs_obj,
                        sce_assay = "counts") {
 
   # Get expression input
-  if(is(exprs_obj, "SummarizedExperiment")) {
-    if(!sce_assay %in% names(assays(exprs_obj))) {
-      stop(paste("Assay", sce_assay, "is not present in the assays associated with the input SingleCellExperiment"))
-    }
-    Y <- t(assay(exprs_obj, sce_assay))
-  } else if(is.matrix(exprs_obj) && is.numeric(exprs_obj)) {
-    Y <- exprs_obj
+  Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
+
+  if (!is.null(exprs_obj_known)) {
+    Y0 <- extract_expression_matrix(exprs_obj_known, sce_assay = sce_assay)
   } else {
-    stop("Input exprs_obj must either be an ExpressionSet or numeric matrix of gene expression")
+    Y0 <- matrix(nrow = 0, ncol = ncol(Y))
   }
 
   # Check X is correct
@@ -37,8 +38,16 @@ cellassign <- function(exprs_obj,
     }
   }
 
+  # Check X_known is correct
+  if(!is.null(X_known)) {
+    if(!(is.matrix(X_known) && is.numeric(X_known))) {
+      stop("X_known must either be NULL or a numeric matrix")
+    }
+  }
+
 
   stopifnot(is.matrix(Y))
+  stopifnot(is.matrix(Y0))
   stopifnot(is.matrix(rho))
 
   if(is.null(rownames(rho))) {
@@ -48,41 +57,29 @@ cellassign <- function(exprs_obj,
   if(is.null(colnames(rho))) {
     warning("No cell type names supplied - replacing with generics")
     colnames(rho) <- paste0("cell_type_", seq_len(ncol(rho)))
-  }
 
-
-  if(!is.null(X)) {
-    stopifnot(is.matrix(X))
+    if (!is.null(known_types)) {
+      known_types <- paste0("gene_", known_types)
+    }
   }
 
   N <- nrow(Y)
+  N0 <- nrow(Y0)
 
-  if(is.null(X)) {
-    X <- matrix(1, nrow = N)
-  } else {
-    # We can be a little intelligent about whether or not to add an intercept -
-    # if any column variance of X is 0 then the associated covariate is constant
-    # so we don't need to add an intercept
-    col_vars <- apply(X, 2, var)
-    if(any(col_vars == 0)) {
-      if(verbose) {
-        message("Intecept column detected in X")
-      }
-    } else {
-      X <- cbind(1, X)
-      if(verbose) {
-        message("No intercept column detected in X - adding")
-      }
-    }
-  }
+  X <- initialize_X(X, N)
+  X0 <- initialize_X(X_known, N0)
 
   G <- ncol(Y)
   C <- ncol(rho)
   P <- ncol(X)
 
+  P0 <- ncol(X0)
+
   # Check the dimensions add up
   stopifnot(nrow(X) == N)
   stopifnot(nrow(rho) == G)
+
+  stopifnot(nrow(X0) == N0)
 
   # Compute size factors for each cell
   if (is.null(s)) {
@@ -90,6 +87,21 @@ cellassign <- function(exprs_obj,
     s <- scran::computeSumFactors(t(Y))
   }
 
+  if (is.null(s_known)) {
+    if (N0 > 0) {
+      message("No size factors supplied - computing from matrix. It is highly recommended to supply size factors calculated using the full gene set")
+      s_known <- scran::computeSumFactors(t(Y_known))
+    } else {
+      s_known <- numeric(0)
+    }
+  }
+
+  if (any(!known_types %in% colnames(rho))) {
+    stop("Known types must be a proper subset of cluster names.")
+  }
+  gamma0 <- model.matrix(~ 0 + factor(known_types, levels = colnames(rho)))
+
+  stopifnot(nrow(gamma0) == N0)
 
   res <- NULL
   data_type <- match.arg(data_type)
@@ -103,6 +115,12 @@ cellassign <- function(exprs_obj,
                                 C = C,
                                 N = N,
                                 P = P,
+                                Y0 = Y0,
+                                s0 = s_known,
+                                X0 = X0,
+                                N0 = N0,
+                                P0 = P0,
+                                gamma0 = gamma0,
                                 verbose = verbose,
                                 n_batches = n_batches,
                                 rel_tol_adam = rel_tol_adam,

@@ -65,3 +65,49 @@ get_mle_cell_type <- function(gamma) {
   colnames(gamma)[which_max]
 }
 
+#' Extract expression matrix from expression object
+#'
+#' @keywords internal
+extract_expression_matrix <- function(exprs_obj, sce_assay = "counts") {
+  if(is(exprs_obj, "SummarizedExperiment")) {
+    if(!sce_assay %in% names(assays(exprs_obj))) {
+      stop(paste("Assay", sce_assay, "is not present in the assays associated with the input SingleCellExperiment"))
+    }
+    Y <- t(assay(exprs_obj, sce_assay))
+  } else if(is.matrix(exprs_obj) && is.numeric(exprs_obj)) {
+    Y <- exprs_obj
+  } else {
+    stop("Input exprs_obj must either be an ExpressionSet or numeric matrix of gene expression")
+  }
+  return(Y)
+}
+
+#' Create X matrix
+#'
+#' @keywords internal
+initialize_X <- function(X, N) {
+  if(is.null(X)) {
+    if (N > 0) {
+      X <- matrix(1, nrow = N)
+    } else {
+      X <- matrix(nrow = 0, ncol = 1)
+    }
+  } else {
+    # We can be a little intelligent about whether or not to add an intercept -
+    # if any column variance of X is 0 then the associated covariate is constant
+    # so we don't need to add an intercept
+    col_vars <- apply(X, 2, var)
+    if(any(col_vars == 0)) {
+      if(verbose) {
+        message("Intecept column detected in X")
+      }
+    } else {
+      X <- cbind(1, X)
+      if(verbose) {
+        message("No intercept column detected in X - adding")
+      }
+    }
+  }
+  return(X)
+}
+
