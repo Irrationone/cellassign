@@ -2,6 +2,7 @@
 
 S3method(print,cellassign_fit)
 export(cellassign)
+export(fit_delta)
 export(likelihood_yn_nb)
 export(marker_list_to_mat)
 export(p_pi_nb2)

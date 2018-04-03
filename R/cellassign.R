@@ -20,7 +20,9 @@ cellassign <- function(exprs_obj,
                        max_iter_em = 20,
                        learning_rate = 0.1,
                        verbose = TRUE,
-                       sce_assay = "counts") {
+                       sce_assay = "counts",
+                       lambda = 1,
+                       plambda = 1) {
 
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
@@ -127,7 +129,9 @@ cellassign <- function(exprs_obj,
                                 rel_tol_em = rel_tol_em,
                                 max_iter_adam = max_iter_adam,
                                 max_iter_em = max_iter_em,
-                                learning_rate = learning_rate)
+                                learning_rate = learning_rate,
+                                lambda = lambda,
+                                plambda = plambda)
   }
   if(data_type == "MS") {
 

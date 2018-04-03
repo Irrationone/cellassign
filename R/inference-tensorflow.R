@@ -36,7 +36,9 @@ inference_tensorflow <- function(Y,
                                  rel_tol_em = 1e-4,
                                  max_iter_adam = 1e5,
                                  max_iter_em = 20,
-                                 learning_rate = 0.1) {
+                                 learning_rate = 0.1,
+                                 lambda = 1,
+                                 plambda = 1) {
 
   tfd <- tf$contrib$distributions
 
@@ -54,8 +56,11 @@ inference_tensorflow <- function(Y,
   delta_log <- tf$Variable(-tf$ones(shape(G,C)))
   phi_log <- tf$Variable(tf$zeros(shape(G)))
   beta <- tf$Variable(tf$zeros(shape(G,P)))
-
+  
+  phi0_log <- tf$Variable(tf$zeros(shape(G)))
   beta0 <- tf$Variable(tf$zeros(shape(G,P0)))
+  
+  #beta0 <- beta # testing
 
   # Stop gradient for irrelevant entries of delta_log
   delta_log <- entry_stop_gradients(delta_log, tf$cast(rho_, tf$bool))
@@ -63,6 +68,8 @@ inference_tensorflow <- function(Y,
   # Transformed variables
   delta = tf$exp(delta_log)
   phi = tf$exp(phi_log)
+  
+  phi0 = tf$exp(phi0_log)
 
   # Model likelihood
   base_mean <- tf$transpose(tf$einsum('np,gp->gn', X_, beta) + tf$log(s_))
@@ -103,10 +110,10 @@ inference_tensorflow <- function(Y,
 
   mu0_cng <- tf$exp(mu0_cng)
 
-  p0 = mu0_cng / (mu0_cng + phi)
+  p0 = mu0_cng / (mu0_cng + phi0)
 
 
-  nb_pdf0 <- tfd$NegativeBinomial(probs = p0, total_count = phi)
+  nb_pdf0 <- tfd$NegativeBinomial(probs = p0, total_count = phi0)
 
   Y0_tensor_list <- list()
   for(c in seq_len(C)) Y0_tensor_list[[c]] <- Y0_
@@ -121,8 +128,22 @@ inference_tensorflow <- function(Y,
 
   Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob)
   Q0 = -tf$einsum('nc,cng->', gamma_known, y0_log_prob)
+  
+  prior_pdf <- tfd$Normal(loc = 0, scale = 1/lambda)
+  beta_log_prob <- prior_pdf$log_prob(beta - tf$reduce_mean(beta))
+  beta_reg <- -tf$einsum('gp->', beta_log_prob)
+  
+  beta0_log_prob <- prior_pdf$log_prob(beta0 - tf$reduce_mean(beta0))
+  beta0_reg <- -tf$einsum('gp->', beta0_log_prob)
+  
+  phi_prior_pdf <- tfd$Normal(loc = 0, scale = 1/plambda)
+  phi_log_prob <- phi_prior_pdf$log_prob(phi)
+  phi_reg <- -tf$einsum('g->', phi_log_prob)
+  
+  phi0_log_prob <- phi_prior_pdf$log_prob(phi0)
+  phi0_reg <- -tf$einsum('g->', phi0_log_prob)
 
-  Q = Q1 + Q0
+  Q = Q1 + Q0 + beta_reg + beta0_reg + phi_reg + phi0_reg
 
   optimizer = tf$train$AdamOptimizer(learning_rate=learning_rate)
   train = optimizer$minimize(Q)
@@ -131,7 +152,7 @@ inference_tensorflow <- function(Y,
   eta_y = tf$reduce_sum(y_log_prob, 2L)
   L_y1 = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
 
-  L_y <- L_y1 - Q0
+  L_y <- L_y1 - Q0 - beta_reg - beta0_reg - phi_reg - phi0_reg
 
   # Split the data
   splits <- split(seq_len(N), seq_len(n_batches))
@@ -185,11 +206,11 @@ inference_tensorflow <- function(Y,
 
   # Finished EM - peel off final values
 
-  mle_params <- sess$run(list(delta, beta, phi, gamma, beta0), feed_dict = fd_full)
+  mle_params <- sess$run(list(delta, beta, phi, gamma, beta0, phi0), feed_dict = fd_full)
 
   sess$close()
 
-  names(mle_params) <- c("delta", "beta", "phi", "gamma", "beta0")
+  names(mle_params) <- c("delta", "beta", "phi", "gamma", "beta0", "phi0")
 
   mle_params$delta[rho == 0] <- 0
 
@@ -200,6 +221,9 @@ inference_tensorflow <- function(Y,
   rownames(mle_params$delta) <- rownames(rho)
   colnames(mle_params$delta) <- colnames(rho)
   names(mle_params$phi) <- rownames(rho)
+  names(mle_params$phi0) <- rownames(rho)
+  rownames(mle_params$beta) <- rownames(rho)
+  rownames(mle_params$beta0) <- rownames(rho)
 
   cell_type <- get_mle_cell_type(mle_params$gamma)
 
