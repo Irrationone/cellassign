@@ -22,7 +22,8 @@ cellassign <- function(exprs_obj,
                        verbose = TRUE,
                        sce_assay = "counts",
                        lambda = 1,
-                       plambda = 1) {
+                       plambda = 1,
+                       phi_type = "global") {
 
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
@@ -131,7 +132,8 @@ cellassign <- function(exprs_obj,
                                 max_iter_em = max_iter_em,
                                 learning_rate = learning_rate,
                                 lambda = lambda,
-                                plambda = plambda)
+                                plambda = plambda,
+                                phi_type = phi_type)
   }
   if(data_type == "MS") {
 
