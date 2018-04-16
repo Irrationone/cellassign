@@ -39,7 +39,8 @@ inference_tensorflow <- function(Y,
                                  learning_rate = 1e-4,
                                  lambda = 1,
                                  plambda = 1,
-                                 phi_type = "global") {
+                                 phi_type = "global",
+                                 gamma_init = NULL) {
 
   tfd <- tf$contrib$distributions
 
@@ -215,9 +216,15 @@ inference_tensorflow <- function(Y,
     for(b in seq_len(n_batches)) {
       fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0)
 
-      # E-step
-      g <- sess$run(gamma, feed_dict = fd)
-
+      if (!is.null(gamma_init) & i == 1) {
+        # E-step
+        message("Initializing with provided gamma_init ...")
+        g <- gamma_init[splits[[b]],]
+        print(table(rowMax(g)))
+      } else {
+        g <- sess$run(gamma, feed_dict = fd)
+      }
+        
       # M-step
       gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, gamma_fixed = g)
 

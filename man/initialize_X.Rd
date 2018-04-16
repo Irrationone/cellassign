@@ -4,7 +4,7 @@
 \alias{initialize_X}
 \title{Create X matrix}
 \usage{
-initialize_X(X, N)
+initialize_X(X, N, verbose = FALSE)
 }
 \description{
 Create X matrix

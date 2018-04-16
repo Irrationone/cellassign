@@ -85,7 +85,7 @@ extract_expression_matrix <- function(exprs_obj, sce_assay = "counts") {
 #' Create X matrix
 #'
 #' @keywords internal
-initialize_X <- function(X, N) {
+initialize_X <- function(X, N, verbose = FALSE) {
   if(is.null(X)) {
     if (N > 0) {
       X <- matrix(1, nrow = N)

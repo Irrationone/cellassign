@@ -23,7 +23,8 @@ cellassign <- function(exprs_obj,
                        sce_assay = "counts",
                        lambda = 1,
                        plambda = 1,
-                       phi_type = "global") {
+                       phi_type = "global",
+                       gamma_init = NULL) {
 
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
@@ -69,8 +70,8 @@ cellassign <- function(exprs_obj,
   N <- nrow(Y)
   N0 <- nrow(Y0)
 
-  X <- initialize_X(X, N)
-  X0 <- initialize_X(X_known, N0)
+  X <- initialize_X(X, N, verbose = verbose)
+  X0 <- initialize_X(X_known, N0, verbose = verbose)
 
   G <- ncol(Y)
   C <- ncol(rho)
@@ -108,6 +109,12 @@ cellassign <- function(exprs_obj,
 
   res <- NULL
   data_type <- match.arg(data_type)
+  
+  if (!is.null(gamma_init)) {
+    gamma_eps <- 1e-3
+    gamma_init[gamma_init < gamma_eps] <- gamma_eps
+    gamma_init <- gamma_init/rowSums(gamma_init)
+  }
 
   if(data_type == "RNAseq") {
     res <- inference_tensorflow(Y = Y,
@@ -133,7 +140,8 @@ cellassign <- function(exprs_obj,
                                 learning_rate = learning_rate,
                                 lambda = lambda,
                                 plambda = plambda,
-                                phi_type = phi_type)
+                                phi_type = phi_type,
+                                gamma_init = gamma_init)
   }
   if(data_type == "MS") {
 
