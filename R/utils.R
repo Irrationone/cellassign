@@ -36,6 +36,7 @@ marker_list_to_mat <- function(marker_list, include_other = TRUE) {
   }
 
   genes <- sort(unique(unlist(marker_list)))
+  genes <- genes[nchar(genes) > 0]
 
   n_cell_types <- length(cell_types)
   n_genes <- length(genes)
