@@ -24,7 +24,8 @@ cellassign <- function(exprs_obj,
                        lambda = 1,
                        plambda = 1,
                        phi_type = "global",
-                       gamma_init = NULL) {
+                       gamma_init = NULL,
+                       num_runs = 1) {
 
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
@@ -117,7 +118,8 @@ cellassign <- function(exprs_obj,
   }
 
   if(data_type == "RNAseq") {
-    res <- inference_tensorflow(Y = Y,
+    run_results <- lapply(1:num_runs, function(i) {
+      res <- inference_tensorflow(Y = Y,
                                 rho = rho,
                                 s = s,
                                 X = X,
@@ -142,12 +144,15 @@ cellassign <- function(exprs_obj,
                                 plambda = plambda,
                                 phi_type = phi_type,
                                 gamma_init = gamma_init)
+      
+      return(structure(res, class = "cellassign_fit"))
+    })
   }
   if(data_type == "MS") {
 
   }
-
-  structure(res, class = "cellassign_fit")
+  
+  return(run_results)
 }
 
 #' @export

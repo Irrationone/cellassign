@@ -9,7 +9,7 @@ cellassign(exprs_obj, rho, s = NULL, X = NULL, exprs_obj_known = NULL,
   data_type = c("RNAseq", "MS"), n_batches = 1, rel_tol_adam = 1e-04,
   rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
   learning_rate = 0.1, verbose = TRUE, sce_assay = "counts", lambda = 1,
-  plambda = 1, phi_type = "global", gamma_init = NULL)
+  plambda = 1, phi_type = "global", gamma_init = NULL, num_runs = 1)
 }
 \description{
 Assign cells to known cell types

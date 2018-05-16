@@ -40,36 +40,36 @@ inference_tensorflow <- function(Y,
                                  lambda = 1,
                                  plambda = 1,
                                  phi_type = "global",
-                                 gamma_init = NULL) {
+                                 gamma_init = NULL,
+                                 random_seed = NULL) {
 
   tfd <- tf$contrib$distributions
 
   # Data placeholders
-  Y_ <- tf$placeholder(tf$float32, shape = shape(NULL, G), name = "Y_")
-  X_ <- tf$placeholder(tf$float32, shape = shape(NULL, P), name = "X_")
-  s_ <- tf$placeholder(tf$float32, shape = shape(NULL), name = "s_")
-  rho_ <- tf$placeholder(tf$float32, shape = shape(G,C), name = "rho_")
+  Y_ <- tf$placeholder(tf$float64, shape = shape(NULL, G), name = "Y_")
+  X_ <- tf$placeholder(tf$float64, shape = shape(NULL, P), name = "X_")
+  s_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "s_")
+  rho_ <- tf$placeholder(tf$float64, shape = shape(G,C), name = "rho_")
 
-  Y0_ <- tf$placeholder(tf$float32, shape = shape(NULL, G), name = "Y0_")
-  X0_ <- tf$placeholder(tf$float32, shape = shape(NULL, P0), name = "X0_")
-  s0_ <- tf$placeholder(tf$float32, shape = shape(NULL), name = "s0_")
+  Y0_ <- tf$placeholder(tf$float64, shape = shape(NULL, G), name = "Y0_")
+  X0_ <- tf$placeholder(tf$float64, shape = shape(NULL, P0), name = "X0_")
+  s0_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "s0_")
 
   # Variables
-  delta_log <- tf$Variable(-tf$ones(shape(G,C)))
+  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #-tf$ones(shape(G,C))
   if (phi_type == "global") {
-    phi_log <- tf$Variable(tf$zeros(shape(G)))
-    phi0_log <- tf$Variable(tf$zeros(shape(G)))
+    phi_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G))
+    phi0_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   } else if (phi_type == "cluster_specific") {
-    phi_log <- tf$Variable(tf$zeros(shape(G,C)))
-    phi0_log <- tf$Variable(tf$zeros(shape(G,C)))
+    phi_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G,C))
+    phi0_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
     
     phi_log <- entry_stop_gradients(phi_log, tf$cast(rho_, tf$bool))
     phi0_log <- entry_stop_gradients(phi_log, tf$cast(rho_, tf$bool))
   }
-  beta <- tf$Variable(tf$zeros(shape(G,P)))
   
-  
-  beta0 <- tf$Variable(tf$zeros(shape(G,P0)))
+  beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  beta0 <- tf$Variable(tf$random_normal(shape(G,P0), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   
   #beta0 <- beta # testing
 
@@ -122,7 +122,7 @@ inference_tensorflow <- function(Y,
 
   gamma <- tf$transpose(tf$exp(p_y_on_c_unorm - p_y_on_c_norm))
 
-  gamma_fixed = tf$placeholder(dtype = tf$float32, shape = shape(NULL,C))
+  gamma_fixed = tf$placeholder(dtype = tf$float64, shape = shape(NULL,C))
 
 
   ## Supervised part
@@ -161,21 +161,21 @@ inference_tensorflow <- function(Y,
   }
 
   #gamma_known <- tf$constant(gamma0, dtype = tf$float32, shape = shape(N0,C))
-  gamma_known <- tf$placeholder(dtype = tf$float32, shape = shape(NULL,C))
+  gamma_known <- tf$placeholder(dtype = tf$float64, shape = shape(NULL,C))
   ### End supervised part
 
 
   Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob)
   Q0 = -tf$einsum('nc,cng->', gamma_known, y0_log_prob)
   
-  prior_pdf <- tfd$Normal(loc = 0, scale = 1/lambda)
+  prior_pdf <- tfd$Normal(loc = tf$constant(0, dtype = tf$float64), scale = tf$constant(1/lambda, dtype = tf$float64))
   beta_log_prob <- prior_pdf$log_prob(beta - tf$reduce_mean(beta))
   beta_reg <- -tf$einsum('gp->', beta_log_prob)
   
   beta0_log_prob <- prior_pdf$log_prob(beta0 - tf$reduce_mean(beta0))
   beta0_reg <- -tf$einsum('gp->', beta0_log_prob)
   
-  phi_prior_pdf <- tfd$Normal(loc = 0, scale = 1/plambda)
+  phi_prior_pdf <- tfd$Normal(loc = tf$constant(0, dtype = tf$float64), scale = tf$constant(1/plambda, dtype = tf$float64))
   phi_log_prob <- phi_prior_pdf$log_prob(phi)
   
   phi0_log_prob <- phi_prior_pdf$log_prob(phi0)
@@ -231,11 +231,12 @@ inference_tensorflow <- function(Y,
       Q_old <- sess$run(Q, feed_dict = gfd)
       Q_diff <- rel_tol_adam + 1
       mi = 0
-
+      
       while(mi < max_iter_adam && Q_diff > rel_tol_adam) {
         mi <- mi + 1
+        
         sess$run(train, feed_dict = gfd)
-
+        
         if(mi %% 20 == 0) {
           if (verbose) {
             message(paste(mi, sess$run(Q1, feed_dict = gfd), sess$run(Q0, feed_dict = gfd), sep = " "))
@@ -253,6 +254,7 @@ inference_tensorflow <- function(Y,
     ll_diff <- (ll - ll_old) / abs(ll_old)
     print(glue("{mi}\tL old: {ll_old}; L new: {ll}; Difference (%): {ll_diff}"))
     ll_old <- ll
+    log_liks <- c(log_liks, ll)
   }
 
   # Finished EM - peel off final values
@@ -287,7 +289,8 @@ inference_tensorflow <- function(Y,
 
   rlist <- list(
     cell_type = cell_type,
-    mle_params = mle_params
+    mle_params = mle_params,
+    lls=log_liks
   )
 
   return(rlist)
