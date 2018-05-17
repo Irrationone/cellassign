@@ -212,7 +212,7 @@ tf$transpose(tf$reshape(tf$tile(tf$transpose(marker_mean, shape(2,0,1)), shape(N
   rlist <- list(
     cell_type = cell_type,
     mle_params = mle_params,
-    lls=log_liks
+    elbos=elbos
   )
 
   return(rlist)
