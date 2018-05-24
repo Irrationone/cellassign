@@ -6,11 +6,16 @@
 #' @param X_dat Auxiliary variable matrix
 #' @param delta_alpha_dat Prior over alpha parameter for delta
 #' @param delta_beta_dat Prior over beta parameter for delta
+#' @param G Number of genes
+#' @param C Number of cell types
+#' @param N Number of cells
+#' @param P Number of auxiliary variables
 #' @param num_hidden_nodes Number of hidden nodes in neural network
 #' @param learning_rate Learning rate
 #' @param n_batches Number of batches to process data in
 #' @export
 vb_tensorflow <- function(rho_dat, Y_dat, Y_std_dat, s_dat, X_dat, delta_alpha_dat, delta_beta_dat,
+                          G, C, N, P,
                           num_hidden_nodes = 50, learning_rate = 1e-3, n_batches = 1) {
   tfd <- tf$contrib$distributions
   tfb <- tf$contrib$distributions$bijectors
@@ -199,12 +204,9 @@ tf$transpose(tf$reshape(tf$tile(tf$transpose(marker_mean, shape(2,0,1)), shape(N
   colnames(mle_params$gamma) <- colnames(rho_dat)
   rownames(mle_params$delta) <- rownames(rho_dat)
   colnames(mle_params$delta) <- colnames(rho_dat)
-  if (phi_type == "global") {
-    names(mle_params$phi) <- rownames(rho_dat)
-  } else if (phi_type == "cluster_specific") {
-    rownames(mle_params$phi) <- rownames(rho_dat)
-    colnames(mle_params$phi) <- colnames(rho_dat)
-  }
+  rownames(mle_params$phigc) <- rownames(rho_dat)
+  colnames(mle_params$phigc) <- colnames(rho_dat)
+  names(mle_params$phi) <- rownames(rho_dat)
   rownames(mle_params$beta) <- rownames(rho_dat)
 
   cell_type <- get_mle_cell_type(mle_params$gamma)
