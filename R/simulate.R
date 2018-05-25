@@ -14,7 +14,7 @@
 #' @param pi An ordinal vector relating each cell to its true marker type assignment
 #' @param delta Gene by cell type matrix delta (all entries with corresponding zeros
 #' in rho will be ignored)
-#' @param phi Gene-length vector of dispersion parameters
+#' @param phi Gene by cell matrix of dispersion parameters
 #' @param beta A gene by covariate vector of coefficients - the first column
 #' should correspond to the intercept (baseline expression) values
 #' @param X A cell by covariate matrix of covariates - the intercept column will
@@ -37,7 +37,8 @@ simulate_cellassign <- function(rho,
   P <- ncol(beta)
 
   stopifnot(length(pi) == N)
-  stopifnot(length(phi) == G)
+  stopifnot(nrow(phi) == G)
+  stopifnot(ncol(phi) == C)
   stopifnot(nrow(beta) == G)
   stopifnot(ncol(delta) == C)
   stopifnot(nrow(delta) == G)
@@ -53,7 +54,7 @@ simulate_cellassign <- function(rho,
   mean_mat <- exp(log(s) + X %*% t(beta) + t((rho * delta)[,pi]))
 
   counts <- sapply(seq_len(G), function(g) {
-    rnbinom(N, mu = mean_mat[,g], size = phi[g])
+    rnbinom(N, mu = mean_mat[,g], size = phi[g,])
   })
 
   counts

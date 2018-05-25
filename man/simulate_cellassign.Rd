@@ -16,7 +16,7 @@ simulate_cellassign(rho, s, pi, delta, phi, beta, X = NULL)
 \item{delta}{Gene by cell type matrix delta (all entries with corresponding zeros
 in rho will be ignored)}
 
-\item{phi}{Gene-length vector of dispersion parameters}
+\item{phi}{Gene by cell matrix of dispersion parameters}
 
 \item{beta}{A gene by covariate vector of coefficients - the first column
 should correspond to the intercept (baseline expression) values}
