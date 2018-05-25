@@ -11,6 +11,8 @@ cellassign <- function(exprs_obj,
                        exprs_obj_known = NULL,
                        s_known = NULL,
                        X_known = NULL,
+                       delta_alpha_prior = NULL,
+                       delta_beta_prior = NULL,
                        known_types = NULL,
                        data_type = c("RNAseq", "MS"),
                        n_batches = 1,
@@ -18,6 +20,11 @@ cellassign <- function(exprs_obj,
                        rel_tol_em = 1e-4,
                        max_iter_adam = 1e5,
                        max_iter_em = 20,
+                       max_adam_epochs = 5e3,
+                       period_epochs = 400,
+                       no_change_rel_thres = 1e-5,
+                       no_change_periods = 2,
+                       num_vb_samples = 10,
                        learning_rate = 0.1,
                        verbose = TRUE,
                        sce_assay = "counts",
@@ -25,7 +32,13 @@ cellassign <- function(exprs_obj,
                        plambda = 1,
                        phi_type = "global",
                        gamma_init = NULL,
-                       num_runs = 1) {
+                       num_runs = 1,
+                       num_hidden_nodes_vb = 50,
+                       inference_method = "EM") {
+  
+  if (inference_method == "VB" & num_runs > 1) {
+    warning("Multiple runs are currently unsupported in VB mode.")
+  }
 
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
@@ -118,41 +131,84 @@ cellassign <- function(exprs_obj,
   }
 
   if(data_type == "RNAseq") {
-    run_results <- lapply(1:num_runs, function(i) {
-      res <- inference_tensorflow(Y = Y,
-                                rho = rho,
-                                s = s,
-                                X = X,
-                                G = G,
-                                C = C,
-                                N = N,
-                                P = P,
-                                Y0 = Y0,
-                                s0 = s_known,
-                                X0 = X0,
-                                N0 = N0,
-                                P0 = P0,
-                                gamma0 = gamma0,
-                                verbose = verbose,
-                                n_batches = n_batches,
-                                rel_tol_adam = rel_tol_adam,
-                                rel_tol_em = rel_tol_em,
-                                max_iter_adam = max_iter_adam,
-                                max_iter_em = max_iter_em,
-                                learning_rate = learning_rate,
-                                lambda = lambda,
-                                plambda = plambda,
-                                phi_type = phi_type,
-                                gamma_init = gamma_init)
+    if (inference_method == "EM") {
+      run_results <- lapply(1:num_runs, function(i) {
+        # TODO: Only run 1 ADAM iteration per EM generation
+        res <- inference_tensorflow(Y = Y,
+                                    rho = rho,
+                                    s = s,
+                                    X = X,
+                                    G = G,
+                                    C = C,
+                                    N = N,
+                                    P = P,
+                                    Y0 = Y0,
+                                    s0 = s_known,
+                                    X0 = X0,
+                                    N0 = N0,
+                                    P0 = P0,
+                                    gamma0 = gamma0,
+                                    verbose = verbose,
+                                    n_batches = n_batches,
+                                    rel_tol_adam = rel_tol_adam,
+                                    rel_tol_em = rel_tol_em,
+                                    max_iter_adam = max_iter_adam,
+                                    max_iter_em = max_iter_em,
+                                    learning_rate = learning_rate,
+                                    lambda = lambda,
+                                    plambda = plambda,
+                                    phi_type = phi_type,
+                                    gamma_init = gamma_init)
+        
+        return(structure(res, class = "cellassign_fit"))
+      })
+      # Return best result
+      res <- run_results[[which.max(sapply(run_results, function(x) x$lls[length(x$lls)]))]]
+    } else if (inference_method == "VB") {
+      variance_multiplier <- 10
+      marker_multiplier <- 4
       
-      return(structure(res, class = "cellassign_fit"))
-    })
+      if (is.null(delta_alpha_prior)) {
+        delta_alpha_prior <- rho * marker_multiplier
+        delta_alpha_prior[delta_alpha_prior == 0] <- 1/exp(1)
+      }
+      
+      if (is.null(delta_beta_prior)) {
+        delta_beta_prior <- rho * variance_multiplier
+        delta_beta_prior[delta_beta_prior == 0] <- 1
+      }
+      
+      Y_std <- scale(Y)
+      res <- vb_tensorflow(rho_dat = rho, 
+                           Y_dat = Y,
+                           Y_std_dat = Y_std,
+                           s_dat = s,
+                           X_dat = X,
+                           delta_alpha_dat = delta_alpha_prior,
+                           delta_beta_dat = delta_beta_prior,
+                           G = G,
+                           C = C,
+                           N = N,
+                           P = P,
+                           S = num_vb_samples,
+                           verbose = verbose,
+                           n_batches = n_batches,
+                           learning_rate = learning_rate,
+                           num_hidden_nodes = num_hidden_nodes_vb,
+                           max_adam_epoch = max_adam_epochs, 
+                           period_epochs = period_epochs, 
+                           no_change_rel_thres = no_change_rel_thres, 
+                           no_change_periods = no_change_periods)
+    } else {
+      stop("Unrecognized inference method.")
+    }
   }
   if(data_type == "MS") {
-
+    # TODO: Implement GMM for MS data.
+    stop("Model for MS data not implemented at the moment.")
   }
   
-  return(run_results)
+  return(res)
 }
 
 #' @export
