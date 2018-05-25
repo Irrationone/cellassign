@@ -3,6 +3,13 @@
 #' Assign cells to known cell types
 #' @importFrom methods is
 #' @importFrom SummarizedExperiment assays
+#' @param exprs_obj SingleCellExperiment object
+#' @param rho Marker gene matrix (binary)
+#' @param s Numeric vector of size factors
+#' @param X Numeric matrix of auxiliary variables (NULL for none)
+#' @param exprs_obj_known SingleCellExperiment object for labeled data (semisupervised)
+#' @param s_known Size factors for labeled cells
+#' @param X_known Auxiliary variables for labeled cells
 #' @export
 cellassign <- function(exprs_obj,
                        rho,
@@ -28,8 +35,6 @@ cellassign <- function(exprs_obj,
                        learning_rate = 0.1,
                        verbose = TRUE,
                        sce_assay = "counts",
-                       lambda = 1,
-                       plambda = 1,
                        phi_type = "global",
                        gamma_init = NULL,
                        num_runs = 1,
@@ -155,8 +160,6 @@ cellassign <- function(exprs_obj,
                                     max_iter_adam = max_iter_adam,
                                     max_iter_em = max_iter_em,
                                     learning_rate = learning_rate,
-                                    lambda = lambda,
-                                    plambda = plambda,
                                     phi_type = phi_type,
                                     gamma_init = gamma_init)
         

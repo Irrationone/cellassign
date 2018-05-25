@@ -37,8 +37,6 @@ inference_tensorflow <- function(Y,
                                  max_iter_adam = 1e5,
                                  max_iter_em = 20,
                                  learning_rate = 1e-4,
-                                 lambda = 1,
-                                 plambda = 1,
                                  phi_type = "global",
                                  gamma_init = NULL,
                                  random_seed = NULL) {
@@ -167,28 +165,8 @@ inference_tensorflow <- function(Y,
 
   Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob)
   Q0 = -tf$einsum('nc,cng->', gamma_known, y0_log_prob)
-  
-  prior_pdf <- tfd$Normal(loc = tf$constant(0, dtype = tf$float64), scale = tf$constant(1/lambda, dtype = tf$float64))
-  beta_log_prob <- prior_pdf$log_prob(beta - tf$reduce_mean(beta))
-  beta_reg <- -tf$einsum('gp->', beta_log_prob)
-  
-  beta0_log_prob <- prior_pdf$log_prob(beta0 - tf$reduce_mean(beta0))
-  beta0_reg <- -tf$einsum('gp->', beta0_log_prob)
-  
-  phi_prior_pdf <- tfd$Normal(loc = tf$constant(0, dtype = tf$float64), scale = tf$constant(1/plambda, dtype = tf$float64))
-  phi_log_prob <- phi_prior_pdf$log_prob(phi)
-  
-  phi0_log_prob <- phi_prior_pdf$log_prob(phi0)
-  
-  if (phi_type == "global") {
-    phi_reg <- -tf$einsum('g->', phi_log_prob)
-    phi0_reg <- -tf$einsum('g->', phi0_log_prob)
-  } else if (phi_type == "cluster_specific") {
-    phi_reg <- -tf$einsum('gc->', phi_log_prob)
-    phi0_reg <- -tf$einsum('gc->', phi0_log_prob)
-  }
 
-  Q = Q1 + Q0 + beta_reg + beta0_reg + phi_reg + phi0_reg
+  Q = Q1 + Q0
 
   optimizer = tf$train$AdamOptimizer(learning_rate=learning_rate)
   train = optimizer$minimize(Q)
@@ -197,7 +175,7 @@ inference_tensorflow <- function(Y,
   eta_y = tf$reduce_sum(y_log_prob, 2L)
   L_y1 = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
 
-  L_y <- L_y1 - Q0 - beta_reg - beta0_reg - phi_reg - phi0_reg
+  L_y <- L_y1 - Q0
 
   # Split the data
   splits <- split(sample(seq_len(N), size = N, replace = FALSE), seq_len(n_batches))
