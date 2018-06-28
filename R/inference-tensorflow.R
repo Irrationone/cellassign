@@ -30,6 +30,7 @@ inference_tensorflow <- function(Y,
                                  N0,
                                  P0,
                                  gamma0,
+                                 use_priors,
                                  delta_log_prior_mean,
                                  phi_log_prior_mean,
                                  delta_log_prior_scale = 1,
@@ -182,7 +183,10 @@ inference_tensorflow <- function(Y,
 
   ## End priors
 
-  Q = Q1 + Q0 + delta_log_prob + phi_log_prob
+  Q = Q1 + Q0
+  if (use_priors) {
+    Q <- Q + delta_log_prob + phi_log_prob
+  }
 
   optimizer = tf$train$AdamOptimizer(learning_rate=learning_rate)
   train = optimizer$minimize(Q)
@@ -191,7 +195,10 @@ inference_tensorflow <- function(Y,
   eta_y = tf$reduce_sum(y_log_prob, 2L)
   L_y1 = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
 
-  L_y <- L_y1 - Q0 - delta_log_prob - phi_log_prob
+  L_y <- L_y1 - Q0
+  if (use_priors) {
+    L_y <- L_y - delta_log_prob - phi_log_prob
+  }
 
   # Split the data
   splits <- split(sample(seq_len(N), size = N, replace = FALSE), seq_len(n_batches))
