@@ -46,7 +46,8 @@ inference_tensorflow <- function(Y,
                                  phi_type = "global",
                                  gamma_init = NULL,
                                  random_seed = NULL) {
-
+  tf$reset_default_graph()
+  
   tfd <- tf$contrib$distributions
 
   # Data placeholders
@@ -59,7 +60,7 @@ inference_tensorflow <- function(Y,
   X0_ <- tf$placeholder(tf$float64, shape = shape(NULL, P0), name = "X0_")
   s0_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "s0_")
   
-  psi_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "psi_")
+  sample_idx <- tf$placeholder(tf$int32, shape = shape(NULL), name = "sample_idx")
 
   # Variables
   delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #-tf$ones(shape(G,C))
@@ -94,8 +95,16 @@ inference_tensorflow <- function(Y,
     pc1 <- pca$x[,1]
     pc1 <- (pc1 - mean(pc1)) / sd(pc1)
     
+    psi_ <- tf$Variable(initial_value = pc1, dtype = tf$float64, name = "psi_")
+    
+    print(summary(pc1))
+    
     W <- tf$Variable(tf$zeros(shape = c(1, G), dtype = tf$float64))
-    psi <- tf$reshape(psi_, shape(-1,1))
+    
+    psi <- tf$reshape(tf$gather(psi_, sample_idx), shape(-1,1))
+    #psi_hidden <- tf$layers$dense(tf$reshape(psi_, shape(-1, 1)), 5, activation = tf$nn$sigmoid, kernel_initializer = tf$truncated_normal_initializer(stddev = 0.1, dtype = tf$float64), name = "psi_hidden")
+    #psi <- tf$layers$dense(inputs = psi_hidden, units = 1, activation = NULL, kernel_initializer = tf$truncated_normal_initializer(stddev = 0.1, dtype = tf$float64), name = "psi_outs")
+    
     psi_times_W <- tf$matmul(psi,W)
   }
 
@@ -202,7 +211,7 @@ inference_tensorflow <- function(Y,
   
   if (random_effects) {
     psi_pdf <- tf$contrib$distributions$Normal(loc = tf$zeros(1, dtype = tf$float64), scale = tf$ones(1, dtype = tf$float64))
-    psi_log_prob <- psi_pdf$log_prob(psi)
+    psi_log_prob <- -psi_pdf$log_prob(psi)
   }
 
   # TODO: Consider whether phi0 deserves as prior
@@ -245,7 +254,7 @@ inference_tensorflow <- function(Y,
   if (!random_effects) {
     fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0)
   } else {
-    fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, psi_ = pc1)
+    fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, sample_idx = 1:N)
   }
   log_liks <- ll_old <- sess$run(L_y, feed_dict = fd_full)
 
@@ -256,7 +265,8 @@ inference_tensorflow <- function(Y,
       if (!random_effects) {
         fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0)
       } else {
-        fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, psi_ = pc1[splits[[b]]])
+        fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0,
+                   sample_idx = splits[[b]])
       }
 
       if (!is.null(gamma_init) & i == 1) {
@@ -273,7 +283,7 @@ inference_tensorflow <- function(Y,
         gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, gamma_fixed = g)
       } else {
         gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, gamma_fixed = g,
-                    psi_ = pc1[splits[[b]]])
+                    sample_idx = splits[[b]])
       }
 
       Q_old <- sess$run(Q, feed_dict = gfd)
@@ -287,7 +297,10 @@ inference_tensorflow <- function(Y,
 
         if(mi %% 20 == 0) {
           if (verbose) {
-            message(paste(mi, sess$run(Q1, feed_dict = gfd), sess$run(Q0, feed_dict = gfd), sep = " "))
+            message(paste(mi, sess$run(Q1, feed_dict = gfd), sess$run(Q0, feed_dict = gfd), sep = " ")) #,  sess$run(tf$reduce_sum(psi_log_prob), feed_dict = gfd)
+            #print(summary(sess$run(psi, feed_dict = gfd)[,1]))
+            #print(summary(sess$run(psi_, feed_dict = gfd)))
+            #print(summary(sess$run(psi_, feed_dict = gfd)[setdiff(1:N, splits[[b]])]))
           }
           Q_new <- sess$run(Q, feed_dict = gfd)
           Q_diff = -(Q_new - Q_old) / abs(Q_old)
