@@ -5,13 +5,14 @@
 \title{Assign cells to known cell types}
 \usage{
 cellassign_em(exprs_obj, rho, s = NULL, X = NULL, exprs_obj_known = NULL,
-  s_known = NULL, X_known = NULL, known_types = NULL,
+  s_known = NULL, X_known = NULL, known_types = NULL, use_priors = TRUE,
   delta_log_prior_mean = 0, phi_log_prior_mean = 0,
   delta_log_prior_scale = 1, phi_log_prior_scale = 1,
-  data_type = c("RNAseq", "MS"), n_batches = 1, rel_tol_adam = 1e-04,
-  rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
-  learning_rate = 0.1, verbose = TRUE, sce_assay = "counts",
-  phi_type = "global", gamma_init = NULL, num_runs = 1)
+  random_effects = FALSE, data_type = c("RNAseq", "MS"), n_batches = 1,
+  rel_tol_adam = 1e-04, rel_tol_em = 1e-04, max_iter_adam = 1e+05,
+  max_iter_em = 20, learning_rate = 0.1, verbose = TRUE,
+  sce_assay = "counts", phi_type = "global", gamma_init = NULL,
+  num_runs = 1)
 }
 \arguments{
 \item{exprs_obj}{SingleCellExperiment object}
