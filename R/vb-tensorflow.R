@@ -171,7 +171,7 @@ tf$transpose(tf$reshape(tf$tile(tf$transpose(marker_mean, shape(2,0,1)), list(N_
 
   for (it in 1:max_adam_epoch) {
     lb <- 0
-    splits <- split(sample(seq_len(N), size = N, replace = FALSE), seq_len(n_batches))
+    splits <- suppressWarnings(split(sample(seq_len(N), size = N, replace = FALSE), seq_len(n_batches)))
 
     for (i in 1:n_batches) {
       idx <- splits[[i]]
@@ -200,7 +200,6 @@ tf$transpose(tf$reshape(tf$tile(tf$transpose(marker_mean, shape(2,0,1)), list(N_
     if (it %% period_epochs == 0) {
       if (it > 1) {
         old_lb = elbos[length(elbos)]
-        print(old_lb)
         
         if (!is.finite(old_lb)) {
           change <- Inf

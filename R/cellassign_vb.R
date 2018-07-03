@@ -29,7 +29,9 @@ cellassign_vb <- function(exprs_obj,
                           verbose = TRUE,
                           sce_assay = "counts",
                           phi_type = "global",
-                          num_hidden_nodes_vb = 50) {
+                          num_hidden_nodes_vb = 50,
+                          variance_multiplier = 10,
+                          marker_multiplier = 4) {
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
   
@@ -84,9 +86,6 @@ cellassign_vb <- function(exprs_obj,
   data_type <- match.arg(data_type)
   
   if(data_type == "RNAseq") {
-    variance_multiplier <- 10
-    marker_multiplier <- 4
-    
     if (is.null(delta_alpha_prior)) {
       delta_alpha_prior <- rho * marker_multiplier
       delta_alpha_prior[delta_alpha_prior == 0] <- 1/exp(1)

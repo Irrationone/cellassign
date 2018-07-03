@@ -5,8 +5,8 @@
 \title{Assign cells to known cell types}
 \usage{
 cellassign_em(exprs_obj, rho, s = NULL, X = NULL, exprs_obj_known = NULL,
-  s_known = NULL, X_known = NULL, known_types = NULL, use_priors = TRUE,
-  delta_log_prior_mean = 0, phi_log_prior_mean = 0,
+  s_known = NULL, X_known = NULL, known_types = NULL,
+  use_priors = FALSE, delta_log_prior_mean = 0, phi_log_prior_mean = 0,
   delta_log_prior_scale = 1, phi_log_prior_scale = 1,
   random_effects = FALSE, data_type = c("RNAseq", "MS"), n_batches = 1,
   rel_tol_adam = 1e-04, rel_tol_em = 1e-04, max_iter_adam = 1e+05,

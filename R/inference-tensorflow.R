@@ -202,12 +202,14 @@ inference_tensorflow <- function(Y,
   Q0 = -tf$einsum('nc,cng->', gamma_known, y0_log_prob)
 
   ## Priors
-  delta_log_prior <- tfd$Normal(loc = tf$constant(delta_log_prior_mean, dtype = tf$float64),
-                                scale = tf$constant(delta_log_prior_scale, dtype = tf$float64))
-  phi_log_prior <- tfd$Normal(loc = tf$constant(phi_log_prior_mean, dtype = tf$float64),
-                              scale = tf$constant(phi_log_prior_scale, dtype = tf$float64))
-  delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
-  phi_log_prob <- -tf$reduce_sum(phi_log_prior$log_prob(phi_log))
+  if (use_priors) {
+    delta_log_prior <- tfd$Normal(loc = tf$constant(delta_log_prior_mean, dtype = tf$float64),
+                                  scale = tf$constant(delta_log_prior_scale, dtype = tf$float64))
+    phi_log_prior <- tfd$Normal(loc = tf$constant(phi_log_prior_mean, dtype = tf$float64),
+                                scale = tf$constant(phi_log_prior_scale, dtype = tf$float64))
+    delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
+    phi_log_prob <- -tf$reduce_sum(phi_log_prior$log_prob(phi_log))
+  }
   
   if (random_effects) {
     psi_pdf <- tf$contrib$distributions$Normal(loc = tf$zeros(1, dtype = tf$float64), scale = tf$ones(1, dtype = tf$float64))

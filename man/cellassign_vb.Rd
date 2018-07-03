@@ -9,7 +9,8 @@ cellassign_vb(exprs_obj, rho, s = NULL, X = NULL,
   data_type = c("RNAseq", "MS"), n_batches = 1, max_adam_epochs = 5000,
   period_epochs = 400, no_change_rel_thres = 1e-05, no_change_periods = 2,
   num_vb_samples = 10, learning_rate = 0.1, verbose = TRUE,
-  sce_assay = "counts", phi_type = "global", num_hidden_nodes_vb = 50)
+  sce_assay = "counts", phi_type = "global", num_hidden_nodes_vb = 50,
+  variance_multiplier = 10, marker_multiplier = 4)
 }
 \arguments{
 \item{exprs_obj}{SingleCellExperiment object}
