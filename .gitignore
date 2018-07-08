@@ -3,3 +3,4 @@
 .RData
 Rmd/
 inst/doc
+data/hodgkin_500.rds
