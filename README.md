@@ -8,6 +8,6 @@ Probabilistic assignment of single-cell RNA-seq data to known cell types across 
 `cellassign` can be installed from github via
 
 ``` r
-devtools::install_github("kieranrcampbell/cellassign")
+devtools::install_github("Irrationone/cellassign")
 ```
 
