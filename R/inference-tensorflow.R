@@ -310,7 +310,7 @@ inference_tensorflow <- function(Y,
         }
       } # End gradient descent
 
-      l_new = sess$run(L_y, feed_dict = fd_full) # Log likelihood for this "epoch"
+      l_new = sess$run(L_y, feed_dict = gfd) # Log likelihood for this "epoch"
       ll <- ll + l_new
     }
 
