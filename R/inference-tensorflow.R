@@ -31,6 +31,7 @@ inference_tensorflow <- function(Y,
                                  P0,
                                  gamma0,
                                  use_priors,
+                                 prior_type = "regular",
                                  delta_log_prior_mean,
                                  phi_log_prior_mean,
                                  delta_log_prior_scale = 1,
@@ -63,6 +64,14 @@ inference_tensorflow <- function(Y,
   sample_idx <- tf$placeholder(tf$int32, shape = shape(NULL), name = "sample_idx")
 
   # Variables
+  
+  ## Shrinkage prior on delta
+  if (use_priors & prior_type == "shrinkage") {
+    delta_log_mean <- tf$Variable(0, dtype = tf$float64)
+    delta_log_variance <- tf$Variable(1, dtype = tf$float64) # May need to bound this or put a prior over this
+  }
+  
+  ## Regular variables
   delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #-tf$ones(shape(G,C))
   if (phi_type == "global") {
     phi_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G))
@@ -77,8 +86,6 @@ inference_tensorflow <- function(Y,
 
   beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   beta0 <- tf$Variable(tf$random_normal(shape(G,P0), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
-
-  #beta0 <- beta # testing
 
   # Stop gradient for irrelevant entries of delta_log
   delta_log <- entry_stop_gradients(delta_log, tf$cast(rho_, tf$bool))
@@ -203,12 +210,18 @@ inference_tensorflow <- function(Y,
 
   ## Priors
   if (use_priors) {
-    delta_log_prior <- tfd$Normal(loc = tf$constant(delta_log_prior_mean, dtype = tf$float64),
-                                  scale = tf$constant(delta_log_prior_scale, dtype = tf$float64))
-    phi_log_prior <- tfd$Normal(loc = tf$constant(phi_log_prior_mean, dtype = tf$float64),
-                                scale = tf$constant(phi_log_prior_scale, dtype = tf$float64))
-    delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
-    phi_log_prob <- -tf$reduce_sum(phi_log_prior$log_prob(phi_log))
+    if (prior_type == "regular") {
+      delta_log_prior <- tfd$Normal(loc = tf$constant(delta_log_prior_mean, dtype = tf$float64),
+                                    scale = tf$constant(delta_log_prior_scale, dtype = tf$float64))
+      phi_log_prior <- tfd$Normal(loc = tf$constant(phi_log_prior_mean, dtype = tf$float64),
+                                  scale = tf$constant(phi_log_prior_scale, dtype = tf$float64))
+      delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
+      phi_log_prob <- -tf$reduce_sum(phi_log_prior$log_prob(phi_log))
+    } else if (prior_type == "shrinkage") {
+      delta_log_prior <- tfd$Normal(loc = delta_log_mean,
+                                    scale = delta_log_variance)
+      delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
+    }
   }
   
   if (random_effects) {
@@ -222,7 +235,11 @@ inference_tensorflow <- function(Y,
 
   Q = Q1 + Q0
   if (use_priors) {
-    Q <- Q + delta_log_prob + phi_log_prob
+    if (prior_type == "regular") {
+      Q <- Q + delta_log_prob + phi_log_prob
+    } else if (prior_type == "shrinkage") {
+      Q <- Q + delta_log_prob 
+    }
   }
   
   if (random_effects) {
@@ -238,7 +255,11 @@ inference_tensorflow <- function(Y,
 
   L_y <- L_y1 - Q0
   if (use_priors) {
-    L_y <- L_y - delta_log_prob - phi_log_prob
+    if (prior_type == "regular") {
+      L_y <- L_y - delta_log_prob - phi_log_prob
+    } else if (prior_type == "shrinkage") {
+      L_y <- L_y - delta_log_prob
+    }
   }
   
   if (random_effects) {
@@ -321,14 +342,21 @@ inference_tensorflow <- function(Y,
   }
 
   # Finished EM - peel off final values
-
-  if (!random_effects) {
-    mle_params <- sess$run(list(delta, beta, phi, gamma, beta0, phi0), feed_dict = fd_full)
-    names(mle_params) <- c("delta", "beta", "phi", "gamma", "beta0", "phi0")
-  } else {
-    mle_params <- sess$run(list(delta, beta, phi, gamma, beta0, phi0, psi, W), feed_dict = fd_full)
-    names(mle_params) <- c("delta", "beta", "phi", "gamma", "beta0", "phi0", "psi", "W")
+  variable_list <- list(delta, beta, phi, gamma, beta0, phi0)
+  variable_names <- c("delta", "beta", "phi", "gamma", "beta0", "phi0")
+  
+  if (random_effects) {
+    variable_list <- c(variable_list, list(psi, W))
+    variable_names <- c(variable_names, "psi", "W")
   }
+  
+  if (use_priors & prior_type == "shrinkage") {
+    variable_list <- c(variable_list, list(delta_log_mean, delta_log_variance))
+    variable_names <- c(variable_names, "ld_mean", "ld_var")
+  }
+  
+  mle_params <- sess$run(variable_list, feed_dict = fd_full)
+  names(mle_params) <- variable_names
   sess$close()
 
   mle_params$delta[rho == 0] <- 0
