@@ -35,7 +35,11 @@ cellassign_em <- function(exprs_obj,
                           sce_assay = "counts",
                           phi_type = "global",
                           gamma_init = NULL,
-                          num_runs = 1) {
+                          num_runs = 1,
+                          phi,
+                          beta,
+                          gamma,
+                          epoch_length = 20) {
   
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
@@ -144,6 +148,9 @@ cellassign_em <- function(exprs_obj,
                                   N0 = N0,
                                   P0 = P0,
                                   gamma0 = gamma0,
+                                  phi_const = phi,
+                                  beta_const = beta,
+                                  gamma_const = gamma,
                                   use_priors = use_priors,
                                   prior_type = prior_type,
                                   delta_log_prior_mean = delta_log_prior_mean,
@@ -159,7 +166,8 @@ cellassign_em <- function(exprs_obj,
                                   max_iter_em = max_iter_em,
                                   learning_rate = learning_rate,
                                   phi_type = phi_type,
-                                  gamma_init = gamma_init)
+                                  gamma_init = gamma_init,
+                                  epoch_length = epoch_length)
       
       return(structure(res, class = "cellassign_fit"))
     })

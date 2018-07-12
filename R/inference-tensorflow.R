@@ -30,6 +30,9 @@ inference_tensorflow <- function(Y,
                                  N0,
                                  P0,
                                  gamma0,
+                                 phi_const,
+                                 beta_const,
+                                 gamma_const,
                                  use_priors,
                                  prior_type = "regular",
                                  delta_log_prior_mean,
@@ -46,7 +49,8 @@ inference_tensorflow <- function(Y,
                                  learning_rate = 1e-4,
                                  phi_type = "global",
                                  gamma_init = NULL,
-                                 random_seed = NULL) {
+                                 random_seed = NULL,
+                                 epoch_length = 20) {
   tf$reset_default_graph()
   
   tfd <- tf$contrib$distributions
@@ -74,17 +78,18 @@ inference_tensorflow <- function(Y,
   ## Regular variables
   delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #-tf$ones(shape(G,C))
   if (phi_type == "global") {
-    phi_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G))
+  #   phi_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G))
     phi0_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   } else if (phi_type == "cluster_specific") {
-    phi_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G,C))
+  #   phi_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G,C))
     phi0_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
 
-    phi_log <- entry_stop_gradients(phi_log, tf$cast(rho_, tf$bool))
-    phi0_log <- entry_stop_gradients(phi_log, tf$cast(rho_, tf$bool))
+  #   phi_log <- entry_stop_gradients(phi_log, tf$cast(rho_, tf$bool))
+    phi0_log <- entry_stop_gradients(phi0_log, tf$cast(rho_, tf$bool))
   }
 
-  beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  #beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  beta <- tf$constant(beta_const, dtype = tf$float64, name = "beta")
   beta0 <- tf$Variable(tf$random_normal(shape(G,P0), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
 
   # Stop gradient for irrelevant entries of delta_log
@@ -92,7 +97,8 @@ inference_tensorflow <- function(Y,
 
   # Transformed variables
   delta = tf$exp(delta_log)
-  phi = tf$exp(phi_log)
+  #phi = tf$exp(phi_log)
+  phi = tf$constant(phi_const, dtype = tf$float64, name = "phi")
 
   phi0 = tf$exp(phi0_log)
   
@@ -160,7 +166,8 @@ inference_tensorflow <- function(Y,
   p_y_on_c_unorm <- tf$reduce_sum(y_log_prob, 2L)
   p_y_on_c_norm <- tf$reshape(tf$reduce_logsumexp(p_y_on_c_unorm, 0L), shape(1,-1))
 
-  gamma <- tf$transpose(tf$exp(p_y_on_c_unorm - p_y_on_c_norm))
+  #gamma <- tf$transpose(tf$exp(p_y_on_c_unorm - p_y_on_c_norm))
+  gamma = tf$constant(gamma_const, dtype = tf$float64, name = "gamma")
 
   gamma_fixed = tf$placeholder(dtype = tf$float64, shape = shape(NULL,C))
 
@@ -205,18 +212,18 @@ inference_tensorflow <- function(Y,
   ### End supervised part
 
 
-  Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob)
-  Q0 = -tf$einsum('nc,cng->', gamma_known, y0_log_prob)
+  Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob, name = "Q1")
+  Q0 = -tf$einsum('nc,cng->', gamma_known, y0_log_prob, name = "Q0")
 
   ## Priors
   if (use_priors) {
     if (prior_type == "regular") {
       delta_log_prior <- tfd$Normal(loc = tf$constant(delta_log_prior_mean, dtype = tf$float64),
                                     scale = tf$constant(delta_log_prior_scale, dtype = tf$float64))
-      phi_log_prior <- tfd$Normal(loc = tf$constant(phi_log_prior_mean, dtype = tf$float64),
-                                  scale = tf$constant(phi_log_prior_scale, dtype = tf$float64))
+      # phi_log_prior <- tfd$Normal(loc = tf$constant(phi_log_prior_mean, dtype = tf$float64),
+      #                             scale = tf$constant(phi_log_prior_scale, dtype = tf$float64))
       delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
-      phi_log_prob <- -tf$reduce_sum(phi_log_prior$log_prob(phi_log))
+      # phi_log_prob <- -tf$reduce_sum(phi_log_prior$log_prob(phi_log))
     } else if (prior_type == "shrinkage") {
       delta_log_prior <- tfd$Normal(loc = delta_log_mean,
                                     scale = delta_log_variance)
@@ -236,7 +243,7 @@ inference_tensorflow <- function(Y,
   Q = Q1 + Q0
   if (use_priors) {
     if (prior_type == "regular") {
-      Q <- Q + delta_log_prob + phi_log_prob
+      Q <- Q + delta_log_prob # + phi_log_prob
     } else if (prior_type == "shrinkage") {
       Q <- Q + delta_log_prob 
     }
@@ -256,7 +263,7 @@ inference_tensorflow <- function(Y,
   L_y <- L_y1 - Q0
   if (use_priors) {
     if (prior_type == "regular") {
-      L_y <- L_y - delta_log_prob - phi_log_prob
+      L_y <- L_y - delta_log_prob #- phi_log_prob
     } else if (prior_type == "shrinkage") {
       L_y <- L_y - delta_log_prob
     }
@@ -318,7 +325,7 @@ inference_tensorflow <- function(Y,
 
         sess$run(train, feed_dict = gfd)
 
-        if(mi %% 20 == 0) {
+        if(mi %% epoch_length == 0) {
           if (verbose) {
             message(paste(mi, sess$run(Q1, feed_dict = gfd), sess$run(Q0, feed_dict = gfd), sep = " ")) #,  sess$run(tf$reduce_sum(psi_log_prob), feed_dict = gfd)
             #print(summary(sess$run(psi, feed_dict = gfd)[,1]))
