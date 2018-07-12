@@ -81,7 +81,7 @@ inference_tensorflow <- function(Y,
     phi0_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
 
     phi_log <- entry_stop_gradients(phi_log, tf$cast(rho_, tf$bool))
-    phi0_log <- entry_stop_gradients(phi_log, tf$cast(rho_, tf$bool))
+    phi0_log <- entry_stop_gradients(phi0_log, tf$cast(rho_, tf$bool))
   }
 
   beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)

@@ -54,7 +54,7 @@ simulate_cellassign <- function(rho,
   mean_mat <- exp(log(s) + X %*% t(beta) + t((rho * delta)[,pi]))
 
   counts <- sapply(seq_len(G), function(g) {
-    rnbinom(N, mu = mean_mat[,g], size = phi[g,])
+    rnbinom(N, mu = mean_mat[,g], size = phi[g,][pi])
   })
 
   counts
