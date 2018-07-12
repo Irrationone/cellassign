@@ -349,8 +349,8 @@ inference_tensorflow <- function(Y,
   }
 
   # Finished EM - peel off final values
-  variable_list <- list(delta, beta, phi, gamma, beta0, phi0)
-  variable_names <- c("delta", "beta", "phi", "gamma", "beta0", "phi0")
+  variable_list <- list(delta, beta, phi, gamma, beta0, phi0, delta_log)
+  variable_names <- c("delta", "beta", "phi", "gamma", "beta0", "phi0", "logdelta")
   
   if (random_effects) {
     variable_list <- c(variable_list, list(psi, W))
