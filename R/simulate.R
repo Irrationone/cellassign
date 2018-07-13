@@ -29,7 +29,8 @@ simulate_cellassign <- function(rho,
                                 delta,
                                 phi,
                                 beta,
-                                X = NULL) {
+                                X = NULL,
+                                return_mean = FALSE) {
 
   C <- ncol(rho)
   N <- length(s)
@@ -43,18 +44,18 @@ simulate_cellassign <- function(rho,
   stopifnot(ncol(delta) == C)
   stopifnot(nrow(delta) == G)
 
-  if(is.null(X)) {
-    X <- matrix(1, nrow = N)
-  } else {
-    X <- cbind('intercept'=1, X)
-  }
+  X <- initialize_X(X, N, verbose = FALSE)
 
   stopifnot(ncol(X) == P)
 
-  mean_mat <- exp(log(s) + X %*% t(beta) + t((rho * delta)[,pi]))
+  mean_mat <- exp(log(s) + (X %*% t(beta)) + t((rho * delta)[,pi]))
+  
+  if (return_mean) {
+    return(mean_mat)
+  }
 
   counts <- sapply(seq_len(G), function(g) {
-    rnbinom(N, mu = mean_mat[,g], size = phi[g,][pi])
+    rnbinom(N, prob = phi[g,][pi]/(phi[g,][pi] + mean_mat[,g]), size = phi[g,][pi])
   })
 
   counts

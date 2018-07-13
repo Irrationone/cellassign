@@ -76,13 +76,13 @@ inference_tensorflow <- function(Y,
   }
   
   ## Regular variables
-  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #-tf$ones(shape(G,C))
+  delta_log <- tf$Variable(tf$random_normal(shape(G,C), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #-tf$ones(shape(G,C))
   if (phi_type == "global") {
-  #   phi_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G))
-    phi0_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  #   phi_log <- tf$Variable(tf$random_uniform(shape(G), minval = -4, maxval = 4, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G))
+    phi0_log <- tf$Variable(tf$random_normal(shape(G), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   } else if (phi_type == "cluster_specific") {
-  #   phi_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G,C))
-    phi0_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  #   phi_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -4, maxval = 4, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G,C))
+    phi0_log <- tf$Variable(tf$random_normal(shape(G,C), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
 
   #   phi_log <- entry_stop_gradients(phi_log, tf$cast(rho_, tf$bool))
     phi0_log <- entry_stop_gradients(phi0_log, tf$cast(rho_, tf$bool))
@@ -163,11 +163,11 @@ inference_tensorflow <- function(Y,
     y_log_prob <- tf$transpose(y_log_prob_raw, shape(2,0,1))
   }
 
-  p_y_on_c_unorm <- tf$reduce_sum(y_log_prob, 2L)
-  p_y_on_c_norm <- tf$reshape(tf$reduce_logsumexp(p_y_on_c_unorm, 0L), shape(1,-1))
+  #p_y_on_c_unorm <- tf$reduce_sum(y_log_prob, 2L)
+  #p_y_on_c_norm <- tf$reshape(tf$reduce_logsumexp(p_y_on_c_unorm, 0L), shape(1,-1))
 
   #gamma <- tf$transpose(tf$exp(p_y_on_c_unorm - p_y_on_c_norm))
-  gamma = tf$constant(gamma_const, dtype = tf$float64, name = "gamma")
+  #gamma = tf$constant(gamma_const, dtype = tf$float64, name = "gamma")
 
   gamma_fixed = tf$placeholder(dtype = tf$float64, shape = shape(NULL,C))
 
@@ -299,20 +299,20 @@ inference_tensorflow <- function(Y,
                    sample_idx = splits[[b]])
       }
 
-      if (!is.null(gamma_init) & i == 1) {
-        # E-step
-        message("Initializing with provided gamma_init ...")
-        g <- gamma_init[splits[[b]],]
-        print(table(rowMax(g)))
-      } else {
-        g <- sess$run(gamma, feed_dict = fd)
-      }
+      # if (!is.null(gamma_init) & i == 1) {
+      #   # E-step
+      #   message("Initializing with provided gamma_init ...")
+      #   g <- gamma_init[splits[[b]],]
+      #   print(table(rowMax(g)))
+      # } else {
+      #   g <- sess$run(gamma, feed_dict = fd)
+      # }
 
       # M-step
       if (!random_effects) {
-        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, gamma_fixed = g)
+        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, gamma_fixed = gamma_const)
       } else {
-        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, gamma_fixed = g,
+        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, gamma_fixed = gamma_const,
                     sample_idx = splits[[b]])
       }
 
@@ -349,8 +349,8 @@ inference_tensorflow <- function(Y,
   }
 
   # Finished EM - peel off final values
-  variable_list <- list(delta, beta, phi, gamma, beta0, phi0, delta_log)
-  variable_names <- c("delta", "beta", "phi", "gamma", "beta0", "phi0", "logdelta")
+  variable_list <- list(delta, beta, phi, beta0, phi0, delta_log, rho_, mu_ngc)
+  variable_names <- c("delta", "beta", "phi", "beta0", "phi0", "logdelta", "rho", "mean")
   
   if (random_effects) {
     variable_list <- c(variable_list, list(psi, W))
@@ -371,7 +371,7 @@ inference_tensorflow <- function(Y,
   if(is.null(colnames(rho))) {
     colnames(rho) <- paste0("cell_type_", seq_len(ncol(rho)))
   }
-  colnames(mle_params$gamma) <- colnames(rho)
+  #colnames(mle_params$gamma) <- colnames(rho)
   rownames(mle_params$delta) <- rownames(rho)
   colnames(mle_params$delta) <- colnames(rho)
   if (phi_type == "global") {
@@ -386,10 +386,10 @@ inference_tensorflow <- function(Y,
   rownames(mle_params$beta) <- rownames(rho)
   rownames(mle_params$beta0) <- rownames(rho)
 
-  cell_type <- get_mle_cell_type(mle_params$gamma)
+  #cell_type <- get_mle_cell_type(mle_params$gamma)
 
   rlist <- list(
-    cell_type = cell_type,
+    #cell_type = cell_type,
     mle_params = mle_params,
     lls=log_liks
   )
