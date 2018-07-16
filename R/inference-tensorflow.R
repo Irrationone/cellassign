@@ -66,10 +66,10 @@ inference_tensorflow <- function(Y,
   # Variables
   
   ## Shrinkage prior on delta
-  # if (use_priors & prior_type == "shrinkage") {
-  #   delta_log_mean <- tf$Variable(0, dtype = tf$float64)
-  #   delta_log_variance <- tf$Variable(1, dtype = tf$float64) # May need to bound this or put a prior over this
-  # }
+  if (use_priors & prior_type == "shrinkage") {
+    delta_log_mean <- tf$Variable(0, dtype = tf$float64)
+    delta_log_variance <- tf$Variable(1, dtype = tf$float64) # May need to bound this or put a prior over this
+  }
   
   ## Regular variables
   delta_log <- tf$Variable(tf$ones(shape(G,C), dtype = tf$float64) * log(1+exp(3)), dtype = tf$float64) #-tf$ones(shape(G,C))
@@ -98,24 +98,22 @@ inference_tensorflow <- function(Y,
 
   #phi0 = tf$exp(phi0_log)
   
-  # if (random_effects) {
-  #   # Random effects
-  #   pca <- prcomp(Y, center = TRUE, scale = TRUE)
-  #   pc1 <- pca$x[,1]
-  #   pc1 <- (pc1 - mean(pc1)) / sd(pc1)
-  #   
-  #   psi_ <- tf$Variable(initial_value = pc1, dtype = tf$float64, name = "psi_")
-  #   
-  #   print(summary(pc1))
-  #   
-  #   W <- tf$Variable(tf$zeros(shape = c(1, G), dtype = tf$float64))
-  #   
-  #   psi <- tf$reshape(tf$gather(psi_, sample_idx), shape(-1,1))
-  #   #psi_hidden <- tf$layers$dense(tf$reshape(psi_, shape(-1, 1)), 5, activation = tf$nn$sigmoid, kernel_initializer = tf$truncated_normal_initializer(stddev = 0.1, dtype = tf$float64), name = "psi_hidden")
-  #   #psi <- tf$layers$dense(inputs = psi_hidden, units = 1, activation = NULL, kernel_initializer = tf$truncated_normal_initializer(stddev = 0.1, dtype = tf$float64), name = "psi_outs")
-  #   
-  #   psi_times_W <- tf$matmul(psi,W)
-  # }
+  if (random_effects) {
+     # Random effects
+     pca <- prcomp(Y, center = TRUE, scale = TRUE)
+     pc1 <- pca$x[,1]
+     pc1 <- (pc1 - mean(pc1)) / sd(pc1)
+     psi_ <- tf$Variable(initial_value = pc1, dtype = tf$float64, name = "psi_")
+     
+     print(summary(pc1))
+     W <- tf$Variable(tf$zeros(shape = c(1, G), dtype = tf$float64))
+
+     psi <- tf$reshape(tf$gather(psi_, sample_idx), shape(-1,1))
+     #psi_hidden <- tf$layers$dense(tf$reshape(psi_, shape(-1, 1)), 5, activation = tf$nn$sigmoid, kernel_initializer = tf$truncated_normal_initializer(stddev = 0.1, dtype = tf$float64), name = "psi_hidden")
+     #psi <- tf$layers$dense(inputs = psi_hidden, units = 1, activation = NULL, kernel_initializer = tf$truncated_normal_initializer(stddev = 0.1, dtype = tf$float64), name = "psi_outs")
+
+     psi_times_W <- tf$matmul(psi,W)
+  }
 
   # Model likelihood
   base_mean <- tf$transpose(tf$einsum('np,gp->gn', X_, beta) + tf$log(s_))
@@ -174,43 +172,43 @@ inference_tensorflow <- function(Y,
   Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob, name = "Q1")
   Q2 = -tf$reduce_sum(tf$transpose(gamma_fixed) * tf$reduce_sum(y_log_prob, 2L))
 
-  ## Priors
-  # if (use_priors) {
-  #   if (prior_type == "regular") {
-  #     delta_log_prior <- tfd$Normal(loc = tf$constant(delta_log_prior_mean, dtype = tf$float64),
-  #                                   scale = tf$constant(delta_log_prior_scale, dtype = tf$float64))
-  #     # phi_log_prior <- tfd$Normal(loc = tf$constant(phi_log_prior_mean, dtype = tf$float64),
-  #     #                             scale = tf$constant(phi_log_prior_scale, dtype = tf$float64))
-  #     delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
-  #     # phi_log_prob <- -tf$reduce_sum(phi_log_prior$log_prob(phi_log))
-  #   } else if (prior_type == "shrinkage") {
-  #     delta_log_prior <- tfd$Normal(loc = delta_log_mean,
-  #                                   scale = delta_log_variance)
-  #     delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
-  #   }
-  # }
+  # Priors
+  if (use_priors) {
+    if (prior_type == "regular") {
+      delta_log_prior <- tfd$Normal(loc = tf$constant(delta_log_prior_mean, dtype = tf$float64),
+                                    scale = tf$constant(delta_log_prior_scale, dtype = tf$float64))
+      # phi_log_prior <- tfd$Normal(loc = tf$constant(phi_log_prior_mean, dtype = tf$float64),
+      #                             scale = tf$constant(phi_log_prior_scale, dtype = tf$float64))
+      delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
+      # phi_log_prob <- -tf$reduce_sum(phi_log_prior$log_prob(phi_log))
+    } else if (prior_type == "shrinkage") {
+      delta_log_prior <- tfd$Normal(loc = delta_log_mean,
+                                    scale = delta_log_variance)
+      delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
+    }
+  }
   
-  # if (random_effects) {
-  #   psi_pdf <- tf$contrib$distributions$Normal(loc = tf$zeros(1, dtype = tf$float64), scale = tf$ones(1, dtype = tf$float64))
-  #   psi_log_prob <- -psi_pdf$log_prob(psi)
-  # }
+  if (random_effects) {
+    psi_pdf <- tf$contrib$distributions$Normal(loc = tf$zeros(1, dtype = tf$float64), scale = tf$ones(1, dtype = tf$float64))
+    psi_log_prob <- -psi_pdf$log_prob(psi)
+  }
 
   # TODO: Consider whether phi0 deserves as prior
 
   ## End priors
 
   Q = Q1 #+ Q0
-  # if (use_priors) {
-  #   if (prior_type == "regular") {
-  #     Q <- Q + delta_log_prob # + phi_log_prob
-  #   } else if (prior_type == "shrinkage") {
-  #     Q <- Q + delta_log_prob 
-  #   }
-  # }
-  
-  # if (random_effects) {
-  #   Q <- Q + tf$reduce_sum(psi_log_prob)
-  # }
+  if (use_priors) {
+    if (prior_type == "regular") {
+      Q <- Q + delta_log_prob # + phi_log_prob
+    } else if (prior_type == "shrinkage") {
+      Q <- Q + delta_log_prob
+    }
+  }
+
+  if (random_effects) {
+    Q <- Q + tf$reduce_sum(psi_log_prob)
+  }
 
   optimizer = tf$train$AdamOptimizer(learning_rate=learning_rate)
   train = optimizer$minimize(Q)
@@ -220,17 +218,17 @@ inference_tensorflow <- function(Y,
   L_y1 = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
 
   L_y <- L_y1 #- Q0
-  # if (use_priors) {
-  #   if (prior_type == "regular") {
-  #     L_y <- L_y - delta_log_prob #- phi_log_prob
-  #   } else if (prior_type == "shrinkage") {
-  #     L_y <- L_y - delta_log_prob
-  #   }
-  # }
+  if (use_priors) {
+    if (prior_type == "regular") {
+      L_y <- L_y - delta_log_prob #- phi_log_prob
+    } else if (prior_type == "shrinkage") {
+      L_y <- L_y - delta_log_prob
+    }
+  }
   
-  # if (random_effects) {
-  #   L_y <- L_y - tf$reduce_sum(psi_log_prob)
-  # }
+  if (random_effects) {
+    L_y <- L_y - tf$reduce_sum(psi_log_prob)
+  }
 
   # Split the data
   splits <- split(sample(seq_len(N), size = N, replace = FALSE), seq_len(n_batches))
@@ -316,16 +314,16 @@ inference_tensorflow <- function(Y,
   
   print(g)
   
-  # if (random_effects) {
-  #   variable_list <- c(variable_list, list(psi, W))
-  #   variable_names <- c(variable_names, "psi", "W")
-  # }
+  if (random_effects) {
+    variable_list <- c(variable_list, list(psi, W))
+    variable_names <- c(variable_names, "psi", "W")
+  }
   
-  # if (use_priors & prior_type == "shrinkage") {
-  #   variable_list <- c(variable_list, list(delta_log_mean, delta_log_variance))
-  #   variable_names <- c(variable_names, "ld_mean", "ld_var")
-  # }
-  # 
+  if (use_priors & prior_type == "shrinkage") {
+    variable_list <- c(variable_list, list(delta_log_mean, delta_log_variance))
+    variable_names <- c(variable_names, "ld_mean", "ld_var")
+  }
+
   mle_params <- sess$run(variable_list, feed_dict = fd_full)
   names(mle_params) <- variable_names
   sess$close()
