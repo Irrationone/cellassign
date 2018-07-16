@@ -55,7 +55,7 @@ simulate_cellassign <- function(rho,
   }
 
   counts <- sapply(seq_len(G), function(g) {
-    rnbinom(N, prob = phi[g,][pi]/(phi[g,][pi] + mean_mat[,g]), size = phi[g,][pi])
+    rnbinom(N, mu = mean_mat[,g], size = phi[g,][pi])
   })
 
   counts
