@@ -7,10 +7,10 @@
 inference_tensorflow(Y, rho, s, X, G, C, N, P, Y0, s0, X0, N0, P0, gamma0,
   use_priors, prior_type = "regular", delta_log_prior_mean,
   phi_log_prior_mean, delta_log_prior_scale = 1, phi_log_prior_scale = 1,
-  random_effects = FALSE, verbose = FALSE, n_batches = 1,
-  rel_tol_adam = 1e-04, rel_tol_em = 1e-04, max_iter_adam = 1e+05,
-  max_iter_em = 20, learning_rate = 1e-04, phi_type = "global",
-  gamma_init = NULL, random_seed = NULL)
+  delta_variance_prior = FALSE, random_effects = FALSE, verbose = FALSE,
+  n_batches = 1, rel_tol_adam = 1e-04, rel_tol_em = 1e-04,
+  max_iter_adam = 1e+05, max_iter_em = 20, learning_rate = 1e-04,
+  phi_type = "global", gamma_init = NULL, random_seed = NULL)
 }
 \description{
 cellassign inference in tensorflow, semi-supervised version

@@ -36,6 +36,7 @@ inference_tensorflow <- function(Y,
                                  phi_log_prior_mean,
                                  delta_log_prior_scale = 1,
                                  phi_log_prior_scale = 1,
+                                 delta_variance_prior = FALSE,
                                  random_effects = FALSE,
                                  verbose = FALSE,
                                  n_batches = 1,
@@ -221,6 +222,11 @@ inference_tensorflow <- function(Y,
       delta_log_prior <- tfd$Normal(loc = delta_log_mean,
                                     scale = delta_log_variance)
       delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
+      
+      if (delta_variance_prior) {
+        delta_variance_log_prior <- tfd$Gamma(concentration = tf$constant(1, dtype = tf$float64), rate = tf$constant(10, dtype = tf$float64))
+        delta_variance_log_prob <- -tf$reduce_sum(delta_variance_log_prior$log_prob(delta_log_variance))
+      }
     }
   }
   
@@ -238,9 +244,13 @@ inference_tensorflow <- function(Y,
     if (prior_type == "regular") {
       Q <- Q + delta_log_prob + phi_log_prob
     } else if (prior_type == "shrinkage") {
-      Q <- Q + delta_log_prob 
+      Q <- Q + delta_log_prob
+      if (delta_variance_prior) {
+        Q <- Q + delta_variance_log_prob
+      }
     }
   }
+  
   
   if (random_effects) {
     Q <- Q + tf$reduce_sum(psi_log_prob)
@@ -259,6 +269,9 @@ inference_tensorflow <- function(Y,
       L_y <- L_y - delta_log_prob - phi_log_prob
     } else if (prior_type == "shrinkage") {
       L_y <- L_y - delta_log_prob
+      if (delta_variance_prior) {
+        L_y <- L_y - delta_variance_log_prob
+      }
     }
   }
   
