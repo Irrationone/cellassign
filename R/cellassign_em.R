@@ -13,9 +13,11 @@ cellassign_em <- function(exprs_obj,
                           rho,
                           s = NULL,
                           X = NULL,
+                          control_pct = NULL,
                           exprs_obj_known = NULL,
                           s_known = NULL,
                           X_known = NULL,
+                          control_pct_known = NULL,
                           known_types = NULL,
                           use_priors = FALSE,
                           prior_type = "regular",
@@ -103,6 +105,10 @@ cellassign_em <- function(exprs_obj,
     s <- scran::computeSumFactors(t(Y))
   }
   
+  if (is.null(control_pct)) {
+    control_pct <- rep(0, N)
+  }
+  
   if (is.null(s_known)) {
     if (N0 > 0) {
       message("No size factors supplied - computing from matrix. It is highly recommended to supply size factors calculated using the full gene set")
@@ -110,6 +116,10 @@ cellassign_em <- function(exprs_obj,
     } else {
       s_known <- numeric(0)
     }
+  }
+  
+  if (is.null(control_pct_known)) {
+    control_pct_known <- numeric(0)
   }
   
   if (any(!known_types %in% colnames(rho))) {
@@ -139,12 +149,14 @@ cellassign_em <- function(exprs_obj,
                                   C = C,
                                   N = N,
                                   P = P,
+                                  control_pct = 1-control_pct,
                                   Y0 = Y0,
                                   s0 = s_known,
                                   X0 = X0,
                                   N0 = N0,
                                   P0 = P0,
                                   gamma0 = gamma0,
+                                  control_pct0 = 1-control_pct_known,
                                   use_priors = use_priors,
                                   prior_type = prior_type,
                                   delta_log_prior_mean = delta_log_prior_mean,

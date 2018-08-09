@@ -24,12 +24,14 @@ inference_tensorflow <- function(Y,
                                  C,
                                  N,
                                  P,
+                                 control_pct,
                                  Y0,
                                  s0,
                                  X0,
                                  N0,
                                  P0,
                                  gamma0,
+                                 control_pct0,
                                  use_priors,
                                  prior_type = "regular",
                                  delta_log_prior_mean,
@@ -57,10 +59,12 @@ inference_tensorflow <- function(Y,
   X_ <- tf$placeholder(tf$float64, shape = shape(NULL, P), name = "X_")
   s_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "s_")
   rho_ <- tf$placeholder(tf$float64, shape = shape(G,C), name = "rho_")
+  control_pct_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "control_pct_")
 
   Y0_ <- tf$placeholder(tf$float64, shape = shape(NULL, G), name = "Y0_")
   X0_ <- tf$placeholder(tf$float64, shape = shape(NULL, P0), name = "X0_")
   s0_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "s0_")
+  control_pct0_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "control_pct0_")
   
   sample_idx <- tf$placeholder(tf$int32, shape = shape(NULL), name = "sample_idx")
 
@@ -117,7 +121,7 @@ inference_tensorflow <- function(Y,
   }
 
   # Model likelihood
-  base_mean <- tf$transpose(tf$einsum('np,gp->gn', X_, beta) + tf$log(s_))
+  base_mean <- tf$transpose(tf$einsum('np,gp->gn', X_, beta) + tf$add(tf$log(s_), tf$log(control_pct_), name = "s_to_control"))
 
   base_mean_list <- list()
   for(c in seq_len(C)) base_mean_list[[c]] <- base_mean
@@ -167,7 +171,7 @@ inference_tensorflow <- function(Y,
 
 
   ## Supervised part
-  base_mean0 <- tf$transpose(tf$einsum('np,gp->gn', X0_, beta0) + tf$log(s0_))
+  base_mean0 <- tf$transpose(tf$einsum('np,gp->gn', X0_, beta0) + tf$add(tf$log(s0_), tf$log(control_pct0_), name = "s0_to_control0"))
 
   base_mean0_list <- list()
   for(c in seq_len(C)) base_mean0_list[[c]] <- base_mean0
@@ -286,11 +290,12 @@ inference_tensorflow <- function(Y,
   sess <- tf$Session()
   init <- tf$global_variables_initializer()
   sess$run(init)
+  
 
   if (!random_effects) {
-    fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0)
+    fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, control_pct_ = control_pct, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, control_pct0_ = control_pct0)
   } else {
-    fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, sample_idx = 1:N)
+    fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, control_pct_ = control_pct, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, control_pct0_ = control_pct0, sample_idx = 1:N)
   }
   log_liks <- ll_old <- sess$run(L_y, feed_dict = fd_full)
 
@@ -299,10 +304,11 @@ inference_tensorflow <- function(Y,
     ll <- 0 # log likelihood for this "epoch"
     for(b in seq_len(n_batches)) {
       if (!random_effects) {
-        fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0)
+        fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]],  rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0,
+                   control_pct0_ = control_pct0)
       } else {
-        fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0,
-                   sample_idx = splits[[b]])
+        fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0,
+                   control_pct0_ = control_pct0, sample_idx = splits[[b]])
       }
 
       if (!is.null(gamma_init) & i == 1) {
@@ -316,9 +322,9 @@ inference_tensorflow <- function(Y,
 
       # M-step
       if (!random_effects) {
-        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, gamma_fixed = g)
+        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, control_pct0_ = control_pct0, gamma_known = gamma0, gamma_fixed = g)
       } else {
-        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, gamma_fixed = g,
+        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, control_pct0_ = control_pct0, gamma_known = gamma0, gamma_fixed = g,
                     sample_idx = splits[[b]])
       }
 
