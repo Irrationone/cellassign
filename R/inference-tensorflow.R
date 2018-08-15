@@ -85,17 +85,7 @@ inference_tensorflow <- function(Y,
   }
   
   ## Regular variables
-  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #-tf$ones(shape(G,C))
-  # if (phi_type == "global") {
-  #   phi_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G))
-  #   phi0_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
-  # } else if (phi_type == "cluster_specific") {
-  #   phi_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G,C))
-  #   phi0_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
-  # 
-  #   phi_log <- entry_stop_gradients(phi_log, tf$cast(rho_, tf$bool))
-  #   phi0_log <- entry_stop_gradients(phi0_log, tf$cast(rho_, tf$bool))
-  # }
+  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
 
   beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   beta0 <- tf$Variable(tf$random_normal(shape(G,P0), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
@@ -353,8 +343,8 @@ inference_tensorflow <- function(Y,
   }
 
   # Finished EM - peel off final values
-  variable_list <- list(delta, beta, phi, gamma, beta0, phi0, mu_ngc, Y_, basis_means, a)
-  variable_names <- c("delta", "beta", "phi", "gamma", "beta0", "phi0", "mu", "Y", "basis_means", "a")
+  variable_list <- list(delta, beta, phi, gamma, beta0, phi0)
+  variable_names <- c("delta", "beta", "phi", "gamma", "beta0", "phi0")
   
   if (random_effects) {
     variable_list <- c(variable_list, list(psi, W))
@@ -378,10 +368,6 @@ inference_tensorflow <- function(Y,
   colnames(mle_params$gamma) <- colnames(rho)
   rownames(mle_params$delta) <- rownames(rho)
   colnames(mle_params$delta) <- colnames(rho)
-  # rownames(mle_params$phi) <- rownames(rho)
-  # rownames(mle_params$phi0) <- rownames(rho)
-  # colnames(mle_params$phi) <- colnames(rho)
-  # colnames(mle_params$phi0) <- colnames(rho)
   rownames(mle_params$beta) <- rownames(rho)
   rownames(mle_params$beta0) <- rownames(rho)
   
