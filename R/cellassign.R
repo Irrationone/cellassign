@@ -35,7 +35,6 @@ cellassign <- function(exprs_obj,
                        learning_rate = 0.1,
                        verbose = TRUE,
                        sce_assay = "counts",
-                       phi_type = "global",
                        gamma_init = NULL,
                        num_runs = 1,
                        num_hidden_nodes_vb = 50,
@@ -160,7 +159,6 @@ cellassign <- function(exprs_obj,
                                     max_iter_adam = max_iter_adam,
                                     max_iter_em = max_iter_em,
                                     learning_rate = learning_rate,
-                                    phi_type = phi_type,
                                     gamma_init = gamma_init)
         
         return(structure(res, class = "cellassign_fit"))

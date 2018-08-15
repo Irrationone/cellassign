@@ -11,8 +11,8 @@ cellassign(exprs_obj, rho, s = NULL, X = NULL, exprs_obj_known = NULL,
   max_iter_adam = 1e+05, max_iter_em = 20, max_adam_epochs = 5000,
   period_epochs = 400, no_change_rel_thres = 1e-05, no_change_periods = 2,
   num_vb_samples = 10, learning_rate = 0.1, verbose = TRUE,
-  sce_assay = "counts", phi_type = "global", gamma_init = NULL,
-  num_runs = 1, num_hidden_nodes_vb = 50, inference_method = "EM")
+  sce_assay = "counts", gamma_init = NULL, num_runs = 1,
+  num_hidden_nodes_vb = 50, inference_method = "EM")
 }
 \arguments{
 \item{exprs_obj}{SingleCellExperiment object}
