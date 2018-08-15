@@ -32,12 +32,11 @@ inference_tensorflow <- function(Y,
                                  P0,
                                  gamma0,
                                  control_pct0,
+                                 B = 10,
                                  use_priors,
                                  prior_type = "regular",
                                  delta_log_prior_mean,
-                                 phi_log_prior_mean,
                                  delta_log_prior_scale = 1,
-                                 phi_log_prior_scale = 1,
                                  delta_variance_prior = FALSE,
                                  random_effects = FALSE,
                                  verbose = FALSE,
@@ -47,7 +46,6 @@ inference_tensorflow <- function(Y,
                                  max_iter_adam = 1e5,
                                  max_iter_em = 20,
                                  learning_rate = 1e-4,
-                                 phi_type = "global",
                                  gamma_init = NULL,
                                  random_seed = NULL) {
   tf$reset_default_graph()
@@ -67,6 +65,16 @@ inference_tensorflow <- function(Y,
   control_pct0_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "control_pct0_")
   
   sample_idx <- tf$placeholder(tf$int32, shape = shape(NULL), name = "sample_idx")
+  
+  # Added for splines
+  B <- as.integer(B)
+  
+  basis_means_fixed <- seq(from = min(Y), to = max(Y), length.out = B)
+  basis_means <- tf$constant(basis_means_fixed, dtype = tf$float64)
+  
+  b_init <- 2 * (basis_means_fixed[2] - basis_means_fixed[1])^2
+  
+  LOWER_BOUND <- 1e-10
 
   # Variables
   
@@ -78,28 +86,32 @@ inference_tensorflow <- function(Y,
   
   ## Regular variables
   delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #-tf$ones(shape(G,C))
-  if (phi_type == "global") {
-    phi_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G))
-    phi0_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
-  } else if (phi_type == "cluster_specific") {
-    phi_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G,C))
-    phi0_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
-
-    phi_log <- entry_stop_gradients(phi_log, tf$cast(rho_, tf$bool))
-    phi0_log <- entry_stop_gradients(phi0_log, tf$cast(rho_, tf$bool))
-  }
+  # if (phi_type == "global") {
+  #   phi_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G))
+  #   phi0_log <- tf$Variable(tf$random_uniform(shape(G), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  # } else if (phi_type == "cluster_specific") {
+  #   phi_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64) #tf$zeros(shape(G,C))
+  #   phi0_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  # 
+  #   phi_log <- entry_stop_gradients(phi_log, tf$cast(rho_, tf$bool))
+  #   phi0_log <- entry_stop_gradients(phi0_log, tf$cast(rho_, tf$bool))
+  # }
 
   beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   beta0 <- tf$Variable(tf$random_normal(shape(G,P0), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  
+  ## Spline variables
+  a <- tf$exp(tf$Variable(tf$zeros(shape = B, dtype = tf$float64)))
+  b <- tf$exp(tf$constant(rep(-log(b_init), B), dtype = tf$float64))
 
   # Stop gradient for irrelevant entries of delta_log
   delta_log <- entry_stop_gradients(delta_log, tf$cast(rho_, tf$bool))
 
   # Transformed variables
   delta = tf$exp(delta_log)
-  phi = tf$exp(phi_log)
-
-  phi0 = tf$exp(phi0_log)
+  # phi = tf$exp(phi_log)
+  # 
+  # phi0 = tf$exp(phi0_log)
   
   if (random_effects) {
     # Random effects
@@ -133,34 +145,27 @@ inference_tensorflow <- function(Y,
     mu_cng <- mu_cng + psi_times_W
   }
   
-  if (phi_type == "global") {
-    mu_cng <- tf$exp(mu_cng)
-
-    p = mu_cng / (mu_cng + phi)
-
-    nb_pdf <- tfd$NegativeBinomial(probs = p, total_count = phi)
-  } else if (phi_type == "cluster_specific") {
-    mu_ngc <- tf$transpose(mu_cng, shape(1,2,0))
-    
-    mu_ngc <- tf$exp(mu_ngc)
-
-    p = mu_ngc / (mu_ngc + phi)
-
-    nb_pdf <- tfd$NegativeBinomial(probs = p, total_count = phi)
-  }
+  mu_cngb <- tf$tile(tf$expand_dims(mu_cng, axis = 3L), c(1L, 1L, 1L, B))
+  
+  phi_cng <- tf$reduce_sum(a * tf$exp(-b * tf$square(mu_cngb - basis_means)), 3L) + LOWER_BOUND
+  phi <- tf$transpose(phi_cng, shape(1,2,0))
+  
+  mu_ngc <- tf$transpose(mu_cng, shape(1,2,0))
+  
+  mu_ngc <- tf$exp(mu_ngc)
+  
+  p = mu_ngc / (mu_ngc + phi)
+  
+  nb_pdf <- tfd$NegativeBinomial(probs = p, total_count = phi)
+  
 
   Y_tensor_list <- list()
   for(c in seq_len(C)) Y_tensor_list[[c]] <- Y_
-  if (phi_type == "global") {
-    Y__ = tf$transpose(tf$stack(Y_tensor_list, axis = 2), shape(2,0,1))
+  Y__ = tf$stack(Y_tensor_list, axis = 2)
+  
+  y_log_prob_raw <- nb_pdf$log_prob(Y__)
+  y_log_prob <- tf$transpose(y_log_prob_raw, shape(2,0,1))
 
-    y_log_prob <- nb_pdf$log_prob(Y__)
-  } else if (phi_type == "cluster_specific") {
-    Y__ = tf$stack(Y_tensor_list, axis = 2)
-
-    y_log_prob_raw <- nb_pdf$log_prob(Y__)
-    y_log_prob <- tf$transpose(y_log_prob_raw, shape(2,0,1))
-  }
 
   p_y_on_c_unorm <- tf$reduce_sum(y_log_prob, 2L)
   p_y_on_c_norm <- tf$reshape(tf$reduce_logsumexp(p_y_on_c_unorm, 0L), shape(1,-1))
@@ -176,34 +181,24 @@ inference_tensorflow <- function(Y,
   base_mean0_list <- list()
   for(c in seq_len(C)) base_mean0_list[[c]] <- base_mean0
   mu0_ngc = tf$add(tf$stack(base_mean0_list, 2), tf$multiply(delta, rho_), name = "adding_base_mean_to_delta_rho_supervised")
-  if (phi_type == "global") {
-    mu0_cng = tf$transpose(mu0_ngc, shape(2,0,1))
-
-    mu0_cng <- tf$exp(mu0_cng)
-
-    p0 = mu0_cng / (mu0_cng + phi0)
-
-    nb_pdf0 <- tfd$NegativeBinomial(probs = p0, total_count = phi0)
-  } else if (phi_type == "cluster_specific") {
-    mu0_ngc <- tf$exp(mu0_ngc)
-
-    p0 = mu0_ngc / (mu0_ngc + phi0)
-
-    nb_pdf0 <- tfd$NegativeBinomial(probs = p0, total_count = phi0)
-  }
-
+  
+  mu0_ngc <- tf$exp(mu0_ngc)
+  
+  mu0_ngcb <- tf$tile(tf$expand_dims(mu0_ngc, axis = 3L), c(1L, 1L, 1L, B))
+  
+  phi0 <- tf$reduce_sum(a * tf$exp(-b * tf$square(mu0_ngcb - basis_means)), 3L) + LOWER_BOUND
+  
+  p0 = mu0_ngc / (mu0_ngc + phi0)
+  
+  nb_pdf0 <- tfd$NegativeBinomial(probs = p0, total_count = phi0)
+  
+  
   Y0_tensor_list <- list()
   for(c in seq_len(C)) Y0_tensor_list[[c]] <- Y0_
-  if (phi_type == "global") {
-    Y0__ = tf$transpose(tf$stack(Y0_tensor_list, axis = 2), shape(2,0,1))
-
-    y0_log_prob <- nb_pdf0$log_prob(Y0__)
-  } else if (phi_type == "cluster_specific") {
-    Y0__ = tf$stack(Y0_tensor_list, axis = 2)
-
-    y0_log_prob_raw <- nb_pdf0$log_prob(Y0__)
-    y0_log_prob <- tf$transpose(y0_log_prob_raw, shape(2,0,1))
-  }
+  Y0__ = tf$stack(Y0_tensor_list, axis = 2)
+  
+  y0_log_prob_raw <- nb_pdf0$log_prob(Y0__)
+  y0_log_prob <- tf$transpose(y0_log_prob_raw, shape(2,0,1))
 
   #gamma_known <- tf$constant(gamma0, dtype = tf$float32, shape = shape(N0,C))
   gamma_known <- tf$placeholder(dtype = tf$float64, shape = shape(NULL,C))
@@ -218,10 +213,7 @@ inference_tensorflow <- function(Y,
     if (prior_type == "regular") {
       delta_log_prior <- tfd$Normal(loc = tf$constant(delta_log_prior_mean, dtype = tf$float64),
                                     scale = tf$constant(delta_log_prior_scale, dtype = tf$float64))
-      phi_log_prior <- tfd$Normal(loc = tf$constant(phi_log_prior_mean, dtype = tf$float64),
-                                  scale = tf$constant(phi_log_prior_scale, dtype = tf$float64))
       delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
-      phi_log_prob <- -tf$reduce_sum(phi_log_prior$log_prob(phi_log))
     } else if (prior_type == "shrinkage") {
       delta_log_prior <- tfd$Normal(loc = delta_log_mean,
                                     scale = delta_log_variance)
@@ -246,7 +238,7 @@ inference_tensorflow <- function(Y,
   Q = Q1 + Q0
   if (use_priors) {
     if (prior_type == "regular") {
-      Q <- Q + delta_log_prob + phi_log_prob
+      Q <- Q + delta_log_prob
     } else if (prior_type == "shrinkage") {
       Q <- Q + delta_log_prob
       if (delta_variance_prior) {
@@ -270,7 +262,7 @@ inference_tensorflow <- function(Y,
   L_y <- L_y1 - Q0
   if (use_priors) {
     if (prior_type == "regular") {
-      L_y <- L_y - delta_log_prob - phi_log_prob
+      L_y <- L_y - delta_log_prob
     } else if (prior_type == "shrinkage") {
       L_y <- L_y - delta_log_prob
       if (delta_variance_prior) {
@@ -361,8 +353,8 @@ inference_tensorflow <- function(Y,
   }
 
   # Finished EM - peel off final values
-  variable_list <- list(delta, beta, phi, gamma, beta0, phi0)
-  variable_names <- c("delta", "beta", "phi", "gamma", "beta0", "phi0")
+  variable_list <- list(delta, beta, phi, gamma, beta0, phi0, mu_ngc, Y_, basis_means, a)
+  variable_names <- c("delta", "beta", "phi", "gamma", "beta0", "phi0", "mu", "Y", "basis_means", "a")
   
   if (random_effects) {
     variable_list <- c(variable_list, list(psi, W))
@@ -386,18 +378,13 @@ inference_tensorflow <- function(Y,
   colnames(mle_params$gamma) <- colnames(rho)
   rownames(mle_params$delta) <- rownames(rho)
   colnames(mle_params$delta) <- colnames(rho)
-  if (phi_type == "global") {
-    names(mle_params$phi) <- rownames(rho)
-    names(mle_params$phi0) <- rownames(rho)
-  } else if (phi_type == "cluster_specific") {
-    rownames(mle_params$phi) <- rownames(rho)
-    rownames(mle_params$phi0) <- rownames(rho)
-    colnames(mle_params$phi) <- colnames(rho)
-    colnames(mle_params$phi0) <- colnames(rho)
-  }
+  # rownames(mle_params$phi) <- rownames(rho)
+  # rownames(mle_params$phi0) <- rownames(rho)
+  # colnames(mle_params$phi) <- colnames(rho)
+  # colnames(mle_params$phi0) <- colnames(rho)
   rownames(mle_params$beta) <- rownames(rho)
   rownames(mle_params$beta0) <- rownames(rho)
-
+  
   cell_type <- get_mle_cell_type(mle_params$gamma)
 
   rlist <- list(
