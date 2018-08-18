@@ -18,6 +18,8 @@ entry_stop_gradients <- function(target, mask) {
 #' @importFrom glue glue
 inference_tensorflow <- function(Y,
                                  rho,
+                                 delta_common = NULL,
+                                 n_unique_deltas = NULL,
                                  s,
                                  X,
                                  G,
@@ -66,6 +68,7 @@ inference_tensorflow <- function(Y,
   
   sample_idx <- tf$placeholder(tf$int32, shape = shape(NULL), name = "sample_idx")
   
+  
   # Added for splines
   B <- as.integer(B)
   
@@ -82,6 +85,16 @@ inference_tensorflow <- function(Y,
   if (use_priors & prior_type == "shrinkage") {
     delta_log_mean <- tf$Variable(0, dtype = tf$float64)
     delta_log_variance <- tf$Variable(1, dtype = tf$float64) # May need to bound this or put a prior over this
+  }
+  
+  # Added for hierarchical delta
+  if (use_priors & prior_type == "hierarchical" & !is.null(delta_common)) {
+    delta_common_ <- tf$placeholder(tf$int64, shape = shape(G,C), name = "delta_common")
+    
+    delta_log_unique <- tf$Variable(tf$random_uniform(shape(n_unique_deltas), minval = log(log(2)), maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64, 
+                                    constraint = function(x) tf$clip_by_value(x, tf$constant(log(log(2)), dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
+    
+    delta_log_variance <- tf$Variable(1, dtype = tf$float64)
   }
   
   ## Regular variables
@@ -168,7 +181,7 @@ inference_tensorflow <- function(Y,
 
   ## Supervised part
   base_mean0 <- tf$transpose(tf$einsum('np,gp->gn', X0_, beta0) + tf$add(tf$log(s0_), tf$log(control_pct0_), name = "s0_to_control0"))
-
+  
   base_mean0_list <- list()
   for(c in seq_len(C)) base_mean0_list[[c]] <- base_mean0
   mu0_ngc = tf$add(tf$stack(base_mean0_list, 2), tf$multiply(delta, rho_), name = "adding_base_mean_to_delta_rho_supervised")
@@ -190,15 +203,15 @@ inference_tensorflow <- function(Y,
   
   y0_log_prob_raw <- nb_pdf0$log_prob(Y0__)
   y0_log_prob <- tf$transpose(y0_log_prob_raw, shape(2,0,1))
-
+  
   #gamma_known <- tf$constant(gamma0, dtype = tf$float32, shape = shape(N0,C))
   gamma_known <- tf$placeholder(dtype = tf$float64, shape = shape(NULL,C))
   ### End supervised part
-
-
+  
+  
   Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob)
   Q0 = -tf$einsum('nc,cng->', gamma_known, y0_log_prob)
-
+  
   ## Priors
   if (use_priors) {
     if (prior_type == "regular") {
@@ -209,11 +222,20 @@ inference_tensorflow <- function(Y,
       delta_log_prior <- tfd$Normal(loc = delta_log_mean,
                                     scale = delta_log_variance)
       delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
+    } else if (prior_type == "hierarchical") {
+      delta_log_mean <- tf$gather(params = delta_log_unique, 
+                                  indices = delta_common_, 
+                                  validate_indices = TRUE) * rho_
       
-      if (delta_variance_prior) {
-        delta_variance_log_prior <- tfd$Gamma(concentration = tf$constant(1, dtype = tf$float64), rate = tf$constant(10, dtype = tf$float64))
-        delta_variance_log_prob <- -tf$reduce_sum(delta_variance_log_prior$log_prob(delta_log_variance))
-      }
+      delta_log_prior <- tfd$Normal(loc = delta_log_mean,
+                                    scale = delta_log_variance)
+      
+      delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
+    }
+    
+    if (delta_variance_prior) {
+      delta_variance_log_prior <- tfd$Gamma(concentration = tf$constant(1, dtype = tf$float64), rate = tf$constant(10, dtype = tf$float64))
+      delta_variance_log_prob <- -tf$reduce_sum(delta_variance_log_prior$log_prob(delta_log_variance))
     }
   }
   
@@ -228,13 +250,8 @@ inference_tensorflow <- function(Y,
 
   Q = Q1 + Q0
   if (use_priors) {
-    if (prior_type == "regular") {
-      Q <- Q + delta_log_prob
-    } else if (prior_type == "shrinkage") {
-      Q <- Q + delta_log_prob
-      if (delta_variance_prior) {
-        Q <- Q + delta_variance_log_prob
-      }
+    if (delta_variance_prior) {
+      Q <- Q + delta_variance_log_prob
     }
   }
   
@@ -252,13 +269,9 @@ inference_tensorflow <- function(Y,
 
   L_y <- L_y1 - Q0
   if (use_priors) {
-    if (prior_type == "regular") {
-      L_y <- L_y - delta_log_prob
-    } else if (prior_type == "shrinkage") {
-      L_y <- L_y - delta_log_prob
-      if (delta_variance_prior) {
-        L_y <- L_y - delta_variance_log_prob
-      }
+    L_y <- L_y - delta_log_prob
+    if (delta_variance_prior) {
+      L_y <- L_y - delta_variance_log_prob
     }
   }
   
@@ -352,7 +365,7 @@ inference_tensorflow <- function(Y,
     variable_names <- c(variable_names, "psi", "W")
   }
   
-  if (use_priors & prior_type == "shrinkage") {
+  if (use_priors & prior_type %in% c("shrinkage", "hierarchical")) {
     variable_list <- c(variable_list, list(delta_log_mean, delta_log_variance))
     variable_names <- c(variable_names, "ld_mean", "ld_var")
   }

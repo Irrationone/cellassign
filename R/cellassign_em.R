@@ -22,6 +22,7 @@ cellassign_em <- function(exprs_obj,
                           B = 10,
                           use_priors = FALSE,
                           prior_type = "regular",
+                          delta_common = NULL,
                           delta_log_prior_mean = 0,
                           delta_log_prior_scale = 1,
                           delta_variance_prior = FALSE,
@@ -136,11 +137,26 @@ cellassign_em <- function(exprs_obj,
     gamma_init <- gamma_init/rowSums(gamma_init)
   }
   
+  if (is.null(delta_common)) {
+    n_unique_deltas <- NULL
+  } else {
+    unique_deltas <- unique(delta_common[rho != 0])
+    n_unique_deltas <- length(unique_deltas)
+    # Tensorflow in R should be zero-indexed
+    replace_indices <- 0:(n_unique_deltas-1)
+    
+    delta_common <- plyr::mapvalues(delta_common, from = unique_deltas, to = replace_indices)
+    
+    print(delta_common)
+  }
+  
   if(data_type == "RNAseq") {
     run_results <- lapply(1:num_runs, function(i) {
       # TODO: Only run 1 ADAM iteration per EM generation
       res <- inference_tensorflow(Y = Y,
                                   rho = rho,
+                                  delta_common = delta_common,
+                                  n_unique_deltas = n_unique_deltas,
                                   s = s,
                                   X = X,
                                   G = G,

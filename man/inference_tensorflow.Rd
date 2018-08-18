@@ -4,13 +4,14 @@
 \alias{inference_tensorflow}
 \title{cellassign inference in tensorflow, semi-supervised version}
 \usage{
-inference_tensorflow(Y, rho, s, X, G, C, N, P, control_pct, Y0, s0, X0, N0, P0,
-  gamma0, control_pct0, B = 10, use_priors, prior_type = "regular",
-  delta_log_prior_mean, delta_log_prior_scale = 1,
-  delta_variance_prior = FALSE, random_effects = FALSE, verbose = FALSE,
-  n_batches = 1, rel_tol_adam = 1e-04, rel_tol_em = 1e-04,
-  max_iter_adam = 1e+05, max_iter_em = 20, learning_rate = 1e-04,
-  gamma_init = NULL, random_seed = NULL)
+inference_tensorflow(Y, rho, delta_common = NULL, n_unique_deltas = NULL, s,
+  X, G, C, N, P, control_pct, Y0, s0, X0, N0, P0, gamma0, control_pct0,
+  B = 10, use_priors, prior_type = "regular", delta_log_prior_mean,
+  delta_log_prior_scale = 1, delta_variance_prior = FALSE,
+  random_effects = FALSE, verbose = FALSE, n_batches = 1,
+  rel_tol_adam = 1e-04, rel_tol_em = 1e-04, max_iter_adam = 1e+05,
+  max_iter_em = 20, learning_rate = 1e-04, gamma_init = NULL,
+  random_seed = NULL)
 }
 \description{
 cellassign inference in tensorflow, semi-supervised version
