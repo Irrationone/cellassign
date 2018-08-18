@@ -85,7 +85,8 @@ inference_tensorflow <- function(Y,
   }
   
   ## Regular variables
-  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = log(log(2)), maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64, 
+                           constraint = function(x) tf$clip_by_value(x, tf$constant(log(log(2)), dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
 
   beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   beta0 <- tf$Variable(tf$random_normal(shape(G,P0), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
@@ -343,8 +344,8 @@ inference_tensorflow <- function(Y,
   }
 
   # Finished EM - peel off final values
-  variable_list <- list(delta, beta, phi, gamma, beta0, phi0)
-  variable_names <- c("delta", "beta", "phi", "gamma", "beta0", "phi0")
+  variable_list <- list(delta, beta, phi, gamma, beta0, phi0, mu_ngc)
+  variable_names <- c("delta", "beta", "phi", "gamma", "beta0", "phi0", "mu")
   
   if (random_effects) {
     variable_list <- c(variable_list, list(psi, W))
