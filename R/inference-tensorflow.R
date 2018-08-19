@@ -89,12 +89,11 @@ inference_tensorflow <- function(Y,
   
   # Added for hierarchical delta
   if (use_priors & prior_type == "hierarchical" & !is.null(delta_common)) {
-    delta_common_ <- tf$placeholder(tf$int64, shape = shape(G,C), name = "delta_common")
+    delta_common_ <- tf$placeholder(tf$int64, shape = shape(G,C), name = "delta_common_")
     
-    delta_log_unique <- tf$Variable(tf$random_uniform(shape(n_unique_deltas), minval = log(log(2)), maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64, 
-                                    constraint = function(x) tf$clip_by_value(x, tf$constant(log(log(2)), dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
+    delta_log_unique <- tf$Variable(tf$random_uniform(shape(n_unique_deltas), minval = log(log(2)), maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
     
-    delta_log_variance <- tf$Variable(1, dtype = tf$float64)
+    delta_log_variance <- tf$Variable(0.5, dtype = tf$float64)
   }
   
   ## Regular variables
@@ -225,12 +224,13 @@ inference_tensorflow <- function(Y,
     } else if (prior_type == "hierarchical") {
       delta_log_mean <- tf$gather(params = delta_log_unique, 
                                   indices = delta_common_, 
-                                  validate_indices = TRUE) * rho_
+                                  validate_indices = TRUE) 
+      delta_log_mean <- delta_log_mean * rho_
       
       delta_log_prior <- tfd$Normal(loc = delta_log_mean,
                                     scale = delta_log_variance)
       
-      delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
+      delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log) * rho_)
     }
     
     if (delta_variance_prior) {
@@ -250,6 +250,7 @@ inference_tensorflow <- function(Y,
 
   Q = Q1 + Q0
   if (use_priors) {
+    Q <- Q + delta_log_prob
     if (delta_variance_prior) {
       Q <- Q + delta_variance_log_prob
     }
@@ -288,23 +289,35 @@ inference_tensorflow <- function(Y,
   sess$run(init)
   
 
-  if (!random_effects) {
-    fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, control_pct_ = control_pct, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, control_pct0_ = control_pct0)
-  } else {
+  fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, control_pct_ = control_pct, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, control_pct0_ = control_pct0)
+  
+  if (random_effects) {
     fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, control_pct_ = control_pct, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, control_pct0_ = control_pct0, sample_idx = 1:N)
   }
+  
+  if (use_priors & prior_type == "hierarchical" & !is.null(delta_common)) {
+    fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, control_pct_ = control_pct, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, control_pct0_ = control_pct0, delta_common_ = delta_common)
+  }
+  
+  print(fd_full)
+  
   log_liks <- ll_old <- sess$run(L_y, feed_dict = fd_full)
 
   for(i in seq_len(max_iter_em)) {
 
     ll <- 0 # log likelihood for this "epoch"
     for(b in seq_len(n_batches)) {
-      if (!random_effects) {
+      fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]],  rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0,
+                 control_pct0_ = control_pct0)
+      
+      if (random_effects) {
         fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]],  rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0,
-                   control_pct0_ = control_pct0)
-      } else {
-        fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0,
                    control_pct0_ = control_pct0, sample_idx = splits[[b]])
+      }
+      
+      if (use_priors & prior_type == "hierarchical" & !is.null(delta_common)) {
+        fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]],  rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0,
+                   control_pct0_ = control_pct0, delta_common_ = delta_common)
       }
 
       if (!is.null(gamma_init) & i == 1) {
@@ -317,11 +330,14 @@ inference_tensorflow <- function(Y,
       }
 
       # M-step
-      if (!random_effects) {
-        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, control_pct0_ = control_pct0, gamma_known = gamma0, gamma_fixed = g)
-      } else {
-        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, control_pct0_ = control_pct0, gamma_known = gamma0, gamma_fixed = g,
-                    sample_idx = splits[[b]])
+      gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, control_pct0_ = control_pct0, gamma_known = gamma0, gamma_fixed = g)
+      
+      if (random_effects) {
+        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, control_pct0_ = control_pct0, gamma_known = gamma0, gamma_fixed = g, sample_idx = splits[[b]])
+      }
+      
+      if (use_priors & prior_type == "hierarchical" & !is.null(delta_common)) {
+        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, control_pct0_ = control_pct0, gamma_known = gamma0, gamma_fixed = g, delta_common_ = delta_common)
       }
 
       Q_old <- sess$run(Q, feed_dict = gfd)
@@ -335,7 +351,7 @@ inference_tensorflow <- function(Y,
 
         if(mi %% 20 == 0) {
           if (verbose) {
-            message(paste(mi, sess$run(Q1, feed_dict = gfd), sess$run(Q0, feed_dict = gfd), sep = " ")) #,  sess$run(tf$reduce_sum(psi_log_prob), feed_dict = gfd)
+            message(paste(mi, sess$run(Q1, feed_dict = gfd), sess$run(Q0, feed_dict = gfd), sess$run(delta_log_prob, feed_dict = gfd), sep = " ")) #,  sess$run(tf$reduce_sum(psi_log_prob), feed_dict = gfd)
             #print(summary(sess$run(psi, feed_dict = gfd)[,1]))
             #print(summary(sess$run(psi_, feed_dict = gfd)))
             #print(summary(sess$run(psi_, feed_dict = gfd)[setdiff(1:N, splits[[b]])]))

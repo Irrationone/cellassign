@@ -140,14 +140,13 @@ cellassign_em <- function(exprs_obj,
   if (is.null(delta_common)) {
     n_unique_deltas <- NULL
   } else {
-    unique_deltas <- unique(delta_common[rho != 0])
+    unique_deltas <- sort(unique(delta_common[rho != 0]))
     n_unique_deltas <- length(unique_deltas)
     # Tensorflow in R should be zero-indexed
-    replace_indices <- 0:(n_unique_deltas-1)
+    replace_indices <- (0:(n_unique_deltas-1))+1
     
     delta_common <- plyr::mapvalues(delta_common, from = unique_deltas, to = replace_indices)
-    
-    print(delta_common)
+    storage.mode(delta_common) <- "integer"
   }
   
   if(data_type == "RNAseq") {
