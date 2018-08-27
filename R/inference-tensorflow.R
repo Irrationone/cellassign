@@ -206,13 +206,15 @@ inference_tensorflow <- function(Y,
                                     scale = tf$constant(delta_log_prior_scale, dtype = tf$float64))
       delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
     } else if (prior_type == "shrinkage") {
-      delta_log_prior <- tfd$Normal(loc = delta_log_mean,
+      delta_log_prior <- tfd$Normal(loc = delta_log_mean * rho_,
                                     scale = delta_log_variance)
       delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
       
       if (delta_variance_prior) {
-        delta_variance_log_prior <- tfd$Gamma(concentration = tf$constant(1, dtype = tf$float64), rate = tf$constant(10, dtype = tf$float64))
-        delta_variance_log_prob <- -tf$reduce_sum(delta_variance_log_prior$log_prob(delta_log_variance))
+        #delta_variance_log_prior <- tfd$Gamma(concentration = tf$constant(1, dtype = tf$float64), rate = tf$constant(10, dtype = tf$float64))
+        #delta_variance_log_prior <- tfd$Gamma(concentration = tf$constant(1, dtype = tf$float64), rate = tf$constant(10, dtype = tf$float64))
+        #delta_variance_log_prob <- -tf$reduce_sum(delta_variance_log_prior$log_prob(delta_log_variance))
+        delta_variance_log_prob <- -tf$log(delta_log_variance)
       }
     }
   }
