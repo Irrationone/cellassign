@@ -93,7 +93,7 @@ inference_tensorflow <- function(Y,
     
     delta_log_unique <- tf$Variable(tf$random_uniform(shape(n_unique_deltas), minval = log(log(2)), maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
     
-    delta_log_variance <- tf$Variable(0.5, dtype = tf$float64)
+    delta_log_variance <- tf$Variable(0.1, dtype = tf$float64)
   }
   
   ## Regular variables
@@ -225,7 +225,8 @@ inference_tensorflow <- function(Y,
       delta_log_mean <- tf$gather(params = delta_log_unique, 
                                   indices = delta_common_, 
                                   validate_indices = TRUE) 
-      delta_log_mean <- delta_log_mean * rho_
+      #delta_log_mean <- delta_log_mean * rho_
+      #delta_log_mean <- entry_stop_gradients(delta_log_mean, tf$cast(rho_, tf$bool))
       
       delta_log_prior <- tfd$Normal(loc = delta_log_mean,
                                     scale = delta_log_variance)
@@ -298,8 +299,6 @@ inference_tensorflow <- function(Y,
   if (use_priors & prior_type == "hierarchical" & !is.null(delta_common)) {
     fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, control_pct_ = control_pct, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, control_pct0_ = control_pct0, delta_common_ = delta_common)
   }
-  
-  print(fd_full)
   
   log_liks <- ll_old <- sess$run(L_y, feed_dict = fd_full)
 
