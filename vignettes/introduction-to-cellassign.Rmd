@@ -83,7 +83,10 @@ Note that we have explicitly specified to not include an other class here (the d
 ### Compute size factors
 
 ```{r}
-sizeFactors(example_sce) <- edgeR::calcNormFactors(as.matrix(counts(example_sce)), method = "TMM")
+norm_factors <- edgeR::calcNormFactors(as.matrix(counts(example_sce)), method = "TMM")
+lib_size_factors <- colSums(as.matrix(counts(example_sce)))
+
+sizeFactors(example_sce) <- norm_factors * lib_size_factors / mean(norm_factors * lib_size_factors)
 
 s <- sizeFactors(example_sce)
 ```
@@ -96,10 +99,10 @@ Y <- t(counts(example_sce))[,rownames(rho)]
 
 ### Run CellAssign (EM)
 
-The following line runs the EM version of CellAssign with 2 random initializations and celltype-specific dispersion values. 
+The following line runs the EM version of CellAssign. 
 
 ```{r}
-em_result <- cellassign(exprs_obj = Y, rho = rho, s = s, X = NULL, data_type = "RNAseq", n_batches = 1, num_runs = 2, learning_rate = 1e-3, inference_method = "EM", phi_type = "cluster_specific")
+em_result <- cellassign_em(exprs_obj = Y, rho = rho, s = s, X = NULL, data_type = "RNAseq", n_batches = 1, num_runs = 1, learning_rate = 1e-2, use_priors = TRUE, prior_type = "shrinkage", B = 20, delta_variance_prior = TRUE, verbose = FALSE)
 ```
 
 ```{r}
@@ -114,35 +117,7 @@ example_sce <- example_sce %>% scater::mutate(EM_group=em_result$cell_type)
 with(colData(example_sce), table(Group, EM_group))
 ```
 
-### Run CellAssign (VB)
 
-Variational Bayes is slower, but we can get an idea of the posteriors over our parameters (i.e. so we don't underestimate uncertainty). 
-
-At the moment you can add priors to the $\delta$ parameters in VB. This could be implemented in EM too, but hasn't been. 
-
-Note that this function doesn't return the entire posterior yet -- at the moment it returns similar values as the EM version. 
-
-```{r}
-vb_result <- cellassign(exprs_obj = Y, rho = rho, s = s, X = NULL, data_type = "RNAseq", n_batches = 1, num_runs = 1, learning_rate = 1e-3, inference_method = "VB")
-```
-
-```{r}
-vb_result$cell_type %>% table
-```
-
-```{r}
-example_sce <- example_sce %>% scater::mutate(VB_group=vb_result$cell_type)
-```
-
-```{r}
-with(colData(example_sce), table(Group, VB_group))
-```
-
-### Concordance between EM and VB
-
-```{r}
-with(colData(example_sce), table(EM_group, VB_group))
-```
 
 
 
