@@ -35,7 +35,7 @@ inference_tensorflow <- function(Y,
                                  B = 10,
                                  use_priors,
                                  prior_type = "regular",
-                                 delta_log_prior_mean,
+                                 delta_log_prior_mean = NULL,
                                  delta_log_prior_scale = 1,
                                  delta_variance_prior = FALSE,
                                  random_effects = FALSE,
@@ -216,6 +216,13 @@ inference_tensorflow <- function(Y,
         #delta_variance_log_prob <- -tf$reduce_sum(delta_variance_log_prior$log_prob(delta_log_variance))
         delta_variance_log_prob <- -tf$log(delta_log_variance)
       }
+      
+      if (!is.null(delta_log_prior_mean)) {
+        delta_log_mean_prior <- tfd$Normal(loc = tf$constant(delta_log_prior_mean, dtype = tf$float64), 
+                                           scale = tf$constant(delta_log_prior_scale, dtype = tf$float64))
+        delta_log_mean_log_prob <- -tf$reduce_sum(delta_log_mean_prior$log_prob(delta_log_mean))
+      }
+      
     }
   }
   
@@ -236,6 +243,10 @@ inference_tensorflow <- function(Y,
       Q <- Q + delta_log_prob
       if (delta_variance_prior) {
         Q <- Q + delta_variance_log_prob
+      }
+      
+      if (!is.null(delta_log_prior_mean)) {
+        Q <- Q + delta_log_mean_log_prob
       }
     }
   }
@@ -260,6 +271,9 @@ inference_tensorflow <- function(Y,
       L_y <- L_y - delta_log_prob
       if (delta_variance_prior) {
         L_y <- L_y - delta_variance_log_prob
+      }
+      if (!is.null(delta_log_prior_mean)) {
+        L_y <- L_y - delta_log_mean_log_prob
       }
     }
   }
