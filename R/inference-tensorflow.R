@@ -25,6 +25,7 @@ inference_tensorflow <- function(Y,
                                  N,
                                  P,
                                  control_pct,
+                                 pct_mito = NULL,
                                  Y0,
                                  s0,
                                  X0,
@@ -58,6 +59,9 @@ inference_tensorflow <- function(Y,
   s_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "s_")
   rho_ <- tf$placeholder(tf$float64, shape = shape(G,C), name = "rho_")
   control_pct_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "control_pct_")
+  
+  pct_mito_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "pct_mito_")
+  mito_rho_ <- tf$placeholder(tf$float64, shape = shape(C), name = "mito_rho_")
 
   Y0_ <- tf$placeholder(tf$float64, shape = shape(NULL, G), name = "Y0_")
   X0_ <- tf$placeholder(tf$float64, shape = shape(NULL, P0), name = "X0_")
@@ -87,9 +91,13 @@ inference_tensorflow <- function(Y,
   ## Regular variables
   delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = log(log(2)), maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64, 
                            constraint = function(x) tf$clip_by_value(x, tf$constant(log(log(2)), dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
+  
+  mito_delta_log <- tf$Variable(tf$random_uniform(shape(C), minval = log(log(2)), maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
 
   beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   beta0 <- tf$Variable(tf$random_normal(shape(G,P0), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  
+  mito_beta <- tf$Variable(tf$random_normal(shape(P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   
   ## Spline variables
   a <- tf$exp(tf$Variable(tf$zeros(shape = B, dtype = tf$float64)))
@@ -100,9 +108,9 @@ inference_tensorflow <- function(Y,
 
   # Transformed variables
   delta = tf$exp(delta_log)
-  # phi = tf$exp(phi_log)
-  # 
-  # phi0 = tf$exp(phi0_log)
+
+  mito_delta_log <- entry_stop_gradients(mito_delta_log, tf$cast(mito_rho_, tf$bool))
+  mito_delta = tf$exp(mito_delta_log)
   
   if (random_effects) {
     # Random effects
@@ -161,6 +169,7 @@ inference_tensorflow <- function(Y,
   p_y_on_c_unorm <- tf$reduce_sum(y_log_prob, 2L)
   p_y_on_c_norm <- tf$reshape(tf$reduce_logsumexp(p_y_on_c_unorm, 0L), shape(1,-1))
 
+  ## TODO: Modify gamma depending on the pct_mito inference
   gamma <- tf$transpose(tf$exp(p_y_on_c_unorm - p_y_on_c_norm))
 
   gamma_fixed = tf$placeholder(dtype = tf$float64, shape = shape(NULL,C))
@@ -194,9 +203,22 @@ inference_tensorflow <- function(Y,
   #gamma_known <- tf$constant(gamma0, dtype = tf$float32, shape = shape(N0,C))
   gamma_known <- tf$placeholder(dtype = tf$float64, shape = shape(NULL,C))
   ### End supervised part
+  
+  mito_base_mean <- tf$transpose(tf$einsum('np,p->n', X_, mito_beta))
+  
+  mito_base_mean_list <- list()
+  for(c in seq_len(C)) mito_base_mean_list[[c]] <- mito_base_mean
+  mito_mu_nc = tf$add(tf$stack(mito_base_mean_list, 1), tf$multiply(mito_delta, mito_rho_), name = "mito_mu")
+  
+  sigmoid_pdf <- tf$sigmoid(x = mito_mu_nc, name = "sigmoid_pdf")
+  pct_mito_tensor_list <- list()
+  for (c in seq_len(C)) pct_mito_tensor_list[[c]] <- pct_mito_
+  pct_mito__ <- tf$stack(pct_mito_tensor_list, axis = 1)
+  
+  pct_mito_log_prob <- sigmoid_pdf$log_prob(pct_mito__)
 
 
-  Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob)
+  Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob) - tf$einsum('nc,nc->', gamma_fixed, pct_mito_log_prob)
   Q0 = -tf$einsum('nc,cng->', gamma_known, y0_log_prob)
 
   ## Priors
@@ -260,7 +282,7 @@ inference_tensorflow <- function(Y,
   train = optimizer$minimize(Q)
 
   # Marginal log likelihood for monitoring convergence
-  eta_y = tf$reduce_sum(y_log_prob, 2L)
+  eta_y = tf$reduce_sum(y_log_prob, 2L) + tf$transpose(pct_mito_log_prob)
   L_y1 = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
 
   L_y <- L_y1 - Q0
