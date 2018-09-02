@@ -25,8 +25,8 @@ inference_tensorflow <- function(Y,
                                  N,
                                  P,
                                  control_pct,
-                                 pct_mito = NULL,
-                                 mito_rho = NULL,
+                                 pct_mito = c(0),
+                                 mito_rho = c(0),
                                  Y0,
                                  s0,
                                  X0,
@@ -36,6 +36,7 @@ inference_tensorflow <- function(Y,
                                  control_pct0,
                                  B = 10,
                                  use_priors,
+                                 use_mito,
                                  prior_type = "regular",
                                  delta_log_prior_mean = NULL,
                                  delta_log_prior_scale = 1,
@@ -103,9 +104,11 @@ inference_tensorflow <- function(Y,
   total_concentration <- tf$Variable(tf$random_uniform(shape(1), minval = 0.5, maxval = 10, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
                                      constraint = function(x) tf$clip_by_value(x, tf$constant(1e-2, dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
   
-  mito_delta_log <- entry_stop_gradients(mito_delta_log, tf$cast(mito_rho_, tf$bool))
-  mito_delta = tf$exp(mito_delta_log)
-
+  if (use_mito) {
+    mito_delta_log <- entry_stop_gradients(mito_delta_log, tf$cast(mito_rho_, tf$bool))
+    mito_delta = tf$exp(mito_delta_log)
+  }
+  
   ## Spline variables
   a <- tf$exp(tf$Variable(tf$zeros(shape = B, dtype = tf$float64)))
   b <- tf$exp(tf$constant(rep(-log(b_init), B), dtype = tf$float64))
@@ -202,7 +205,7 @@ inference_tensorflow <- function(Y,
   Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob) 
   Q0 = -tf$einsum('nc,cng->', gamma_known, y0_log_prob)
   
-  if (!is.null(pct_mito) & !is.null(mito_rho)) {
+  if (use_mito) {
     mito_base_mean <- tf$transpose(tf$einsum('np,p->n', X_, mito_beta))
     
     mito_base_mean_list <- list()
@@ -394,7 +397,7 @@ inference_tensorflow <- function(Y,
     variable_names <- c(variable_names, "psi", "W")
   }
   
-  if (!is.null(pct_mito) & !is.null(mito_rho)) {
+  if (use_mito) {
     variable_list <- c(variable_list, list(mito_delta, mito_beta, total_concentration, mito_mu_nc))
     variable_names <- c(variable_names, "mito_delta", "mito_beta", "total_concentration", "mito_mu")
   }
@@ -419,7 +422,7 @@ inference_tensorflow <- function(Y,
   rownames(mle_params$beta) <- rownames(rho)
   rownames(mle_params$beta0) <- rownames(rho)
   
-  if (!is.null(pct_mito) & !is.null(mito_rho)) {
+  if (use_mito) {
     mle_params$mito_delta <- mle_params$mito_delta * mito_rho
     names(mle_params$mito_delta) <- colnames(rho)
   }
