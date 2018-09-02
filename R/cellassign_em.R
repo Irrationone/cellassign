@@ -20,8 +20,8 @@ cellassign_em <- function(exprs_obj,
                           control_pct_known = NULL,
                           known_types = NULL,
                           B = 10,
-                          pct_mito = c(0),
-                          mito_rho = c(0),
+                          pct_mito = NULL,
+                          mito_rho = NULL,
                           use_priors = FALSE,
                           use_mito = FALSE,
                           prior_type = "regular",
@@ -144,6 +144,9 @@ cellassign_em <- function(exprs_obj,
     pct_mito <- pct_mito/100
     pct_mito[pct_mito < mito_eps] <- mito_eps
     pct_mito[pct_mito > (1-mito_eps)] <- 1-mito_eps
+  } else {
+    pct_mito <- rep(0, N)
+    mito_rho <- rep(0, C)
   }
   
   if(data_type == "RNAseq") {

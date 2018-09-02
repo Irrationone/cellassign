@@ -6,8 +6,8 @@
 \usage{
 cellassign_em(exprs_obj, rho, s = NULL, X = NULL, control_pct = NULL,
   exprs_obj_known = NULL, s_known = NULL, X_known = NULL,
-  control_pct_known = NULL, known_types = NULL, B = 10, pct_mito = c(0),
-  mito_rho = c(0), use_priors = FALSE, use_mito = FALSE,
+  control_pct_known = NULL, known_types = NULL, B = 10, pct_mito = NULL,
+  mito_rho = NULL, use_priors = FALSE, use_mito = FALSE,
   prior_type = "regular", delta_log_prior_mean = NULL,
   delta_log_prior_scale = 1, delta_variance_prior = FALSE,
   random_effects = FALSE, data_type = c("RNAseq", "MS"), n_batches = 1,

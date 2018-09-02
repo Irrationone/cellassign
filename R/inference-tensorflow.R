@@ -25,8 +25,8 @@ inference_tensorflow <- function(Y,
                                  N,
                                  P,
                                  control_pct,
-                                 pct_mito = c(0),
-                                 mito_rho = c(0),
+                                 pct_mito = rep(0, nrow(Y)),
+                                 mito_rho = rep(0, C),
                                  Y0,
                                  s0,
                                  X0,
@@ -288,7 +288,10 @@ inference_tensorflow <- function(Y,
   train = optimizer$minimize(Q)
 
   # Marginal log likelihood for monitoring convergence
-  eta_y = tf$reduce_sum(y_log_prob, 2L) + tf$transpose(pct_mito_log_prob)
+  eta_y = tf$reduce_sum(y_log_prob, 2L)
+  if (use_mito) {
+    eta_y <- eta_y + tf$transpose(pct_mito_log_prob)
+  }
   L_y1 = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
 
   L_y <- L_y1 - Q0
@@ -369,8 +372,7 @@ inference_tensorflow <- function(Y,
 
         if(mi %% 20 == 0) {
           if (verbose) {
-            message(paste(mi, sess$run(Q1, feed_dict = gfd), sess$run(Q0, feed_dict = gfd),
-                          sess$run(-tf$einsum('nc,nc->', gamma_fixed, pct_mito_log_prob), feed_dict = gfd), sep = " "))
+            message(paste(mi, sess$run(Q1, feed_dict = gfd), sess$run(Q0, feed_dict = gfd), sep = " "))
           }
           Q_new <- sess$run(Q, feed_dict = gfd)
           Q_diff = -(Q_new - Q_old) / abs(Q_old)
