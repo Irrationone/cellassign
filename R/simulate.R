@@ -14,7 +14,9 @@
 #' @param pi An ordinal vector relating each cell to its true marker type assignment
 #' @param delta Gene by cell type matrix delta (all entries with corresponding zeros
 #' in rho will be ignored)
-#' @param phi Gene by cell matrix of dispersion parameters
+#' @param B Granularity of spline-based fitting of dispersions
+#' @param a Alpha parameters for spline inference of dispersions
+#' @param b Beta parameters for spline inference of dispersions
 #' @param beta A gene by covariate vector of coefficients - the first column
 #' should correspond to the intercept (baseline expression) values
 #' @param X A cell by covariate matrix of covariates - the intercept column will
@@ -27,31 +29,38 @@ simulate_cellassign <- function(rho,
                                 s,
                                 pi,
                                 delta,
-                                phi,
+                                B = 20, 
+                                a,
                                 beta,
-                                X = NULL) {
+                                X = NULL,
+                                min_Y = 0,
+                                max_Y = 1000) {
 
   C <- ncol(rho)
   N <- length(s)
   G <- nrow(rho)
   P <- ncol(beta)
+  B <- as.integer(B)
 
   stopifnot(length(pi) == N)
-  stopifnot(nrow(phi) == G)
-  stopifnot(ncol(phi) == C)
   stopifnot(nrow(beta) == G)
   stopifnot(ncol(delta) == C)
   stopifnot(nrow(delta) == G)
-
-  if(is.null(X)) {
-    X <- matrix(1, nrow = N)
-  } else {
-    X <- cbind('intercept'=1, X)
-  }
+  
+  X <- initialize_X(X, N)
+  
+  basis_means <- seq(from = min_Y, to = max_Y, length.out = B)
+  b_init <- 2 * (basis_means[2] - basis_means[1])^2
+  b <- exp(rep(-log(b_init), B))
+  LOWER_BOUND <- 1e-10
 
   stopifnot(ncol(X) == P)
 
   mean_mat <- exp(log(s) + X %*% t(beta) + t((rho * delta)[,pi]))
+  
+  mean_mat_tiled <- replicate(B, mean_mat)
+  
+  phi <- apply(a * exp(sweep((sweep(mean_mat_tiled, 3, basis_means))^2, 3, -b, '*')), c(1:2), sum) + LOWER_BOUND
 
   counts <- sapply(seq_len(G), function(g) {
     rnbinom(N, mu = mean_mat[,g], size = phi[g,][pi])

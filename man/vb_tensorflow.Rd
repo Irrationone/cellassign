@@ -7,8 +7,8 @@
 vb_tensorflow(rho_dat, Y_dat, Y_std_dat, s_dat, X_dat, delta_alpha_dat,
   delta_beta_dat, G, C, N, P, S = 10, verbose = FALSE,
   num_hidden_nodes = 50, learning_rate = 0.001, n_batches = 1,
-  max_adam_epoch = 5000, period_epochs = 400, no_change_rel_thres = 1e-05,
-  no_change_periods = 2)
+  max_adam_epoch = 5000, period_epochs = 400,
+  no_change_rel_thres = 1e-05, no_change_periods = 2)
 }
 \arguments{
 \item{rho_dat}{Marker gene matrix (binary)}
