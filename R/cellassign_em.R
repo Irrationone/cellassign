@@ -20,7 +20,10 @@ cellassign_em <- function(exprs_obj,
                           control_pct_known = NULL,
                           known_types = NULL,
                           B = 10,
+                          pct_mito = NULL,
+                          mito_rho = NULL,
                           use_priors = FALSE,
+                          use_mito = FALSE,
                           prior_type = "regular",
                           delta_log_prior_mean = NULL,
                           delta_log_prior_scale = 1,
@@ -36,7 +39,8 @@ cellassign_em <- function(exprs_obj,
                           verbose = TRUE,
                           sce_assay = "counts",
                           gamma_init = NULL,
-                          num_runs = 1) {
+                          num_runs = 1,
+                          em_convergence_thres = 1e-5) {
   
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
@@ -136,6 +140,16 @@ cellassign_em <- function(exprs_obj,
     gamma_init <- gamma_init/rowSums(gamma_init)
   }
   
+  if (!is.null(pct_mito)) {
+    mito_eps <- 1e-5
+    pct_mito <- pct_mito/100
+    pct_mito[pct_mito < mito_eps] <- mito_eps
+    pct_mito[pct_mito > (1-mito_eps)] <- 1-mito_eps
+  } else {
+    pct_mito <- rep(0, N)
+    mito_rho <- rep(0, C)
+  }
+  
   if(data_type == "RNAseq") {
     run_results <- lapply(1:num_runs, function(i) {
       # TODO: Only run 1 ADAM iteration per EM generation
@@ -148,6 +162,8 @@ cellassign_em <- function(exprs_obj,
                                   N = N,
                                   P = P,
                                   control_pct = 1-control_pct,
+                                  pct_mito = pct_mito,
+                                  mito_rho = mito_rho,
                                   Y0 = Y0,
                                   s0 = s_known,
                                   X0 = X0,
@@ -157,6 +173,7 @@ cellassign_em <- function(exprs_obj,
                                   B = B,
                                   control_pct0 = 1-control_pct_known,
                                   use_priors = use_priors,
+                                  use_mito = use_mito,
                                   prior_type = prior_type,
                                   delta_log_prior_mean = delta_log_prior_mean,
                                   delta_log_prior_scale = delta_log_prior_scale,
@@ -169,7 +186,8 @@ cellassign_em <- function(exprs_obj,
                                   max_iter_adam = max_iter_adam,
                                   max_iter_em = max_iter_em,
                                   learning_rate = learning_rate,
-                                  gamma_init = gamma_init)
+                                  gamma_init = gamma_init,
+                                  em_convergence_thres = em_convergence_thres)
       
       return(structure(res, class = "cellassign_fit"))
     })

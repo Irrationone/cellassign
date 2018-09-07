@@ -4,7 +4,8 @@
 \alias{simulate_cellassign}
 \title{Simulate from the cellassign model}
 \usage{
-simulate_cellassign(rho, s, pi, delta, phi, beta, X = NULL)
+simulate_cellassign(rho, s, pi, delta, B = 20, a, beta, X = NULL,
+  min_Y = 0, max_Y = 1000)
 }
 \arguments{
 \item{rho}{A gene by cell type binary matrix relating markers to cell types}
@@ -16,13 +17,17 @@ simulate_cellassign(rho, s, pi, delta, phi, beta, X = NULL)
 \item{delta}{Gene by cell type matrix delta (all entries with corresponding zeros
 in rho will be ignored)}
 
-\item{phi}{Gene by cell matrix of dispersion parameters}
+\item{B}{Granularity of spline-based fitting of dispersions}
+
+\item{a}{Alpha parameters for spline inference of dispersions}
 
 \item{beta}{A gene by covariate vector of coefficients - the first column
 should correspond to the intercept (baseline expression) values}
 
 \item{X}{A cell by covariate matrix of covariates - the intercept column will
 always be added.}
+
+\item{b}{Beta parameters for spline inference of dispersions}
 }
 \value{
 An N by G matrix of simulated counts

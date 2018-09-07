@@ -7,13 +7,14 @@
 cellassign_em(exprs_obj, rho, s = NULL, X = NULL, control_pct = NULL,
   exprs_obj_known = NULL, s_known = NULL, X_known = NULL,
   control_pct_known = NULL, known_types = NULL, B = 10,
-  use_priors = FALSE, prior_type = "regular",
+  pct_mito = NULL, mito_rho = NULL, use_priors = FALSE,
+  use_mito = FALSE, prior_type = "regular",
   delta_log_prior_mean = NULL, delta_log_prior_scale = 1,
   delta_variance_prior = FALSE, random_effects = FALSE,
   data_type = c("RNAseq", "MS"), n_batches = 1, rel_tol_adam = 1e-04,
   rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
   learning_rate = 0.1, verbose = TRUE, sce_assay = "counts",
-  gamma_init = NULL, num_runs = 1)
+  gamma_init = NULL, num_runs = 1, em_convergence_thres = 1e-05)
 }
 \arguments{
 \item{exprs_obj}{SingleCellExperiment object}
