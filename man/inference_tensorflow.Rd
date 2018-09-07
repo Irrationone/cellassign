@@ -12,7 +12,7 @@ inference_tensorflow(Y, rho, s, X, G, C, N, P, control_pct,
   random_effects = FALSE, verbose = FALSE, n_batches = 1,
   rel_tol_adam = 1e-04, rel_tol_em = 1e-04, max_iter_adam = 1e+05,
   max_iter_em = 20, learning_rate = 1e-04, gamma_init = NULL,
-  random_seed = NULL)
+  random_seed = NULL, em_convergence_thres = 1e-05)
 }
 \description{
 cellassign inference in tensorflow, semi-supervised version

@@ -39,7 +39,8 @@ cellassign_em <- function(exprs_obj,
                           verbose = TRUE,
                           sce_assay = "counts",
                           gamma_init = NULL,
-                          num_runs = 1) {
+                          num_runs = 1,
+                          em_convergence_thres = 1e-5) {
   
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
@@ -185,7 +186,8 @@ cellassign_em <- function(exprs_obj,
                                   max_iter_adam = max_iter_adam,
                                   max_iter_em = max_iter_em,
                                   learning_rate = learning_rate,
-                                  gamma_init = gamma_init)
+                                  gamma_init = gamma_init,
+                                  em_convergence_thres = em_convergence_thres)
       
       return(structure(res, class = "cellassign_fit"))
     })

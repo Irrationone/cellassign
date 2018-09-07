@@ -50,7 +50,8 @@ inference_tensorflow <- function(Y,
                                  max_iter_em = 20,
                                  learning_rate = 1e-4,
                                  gamma_init = NULL,
-                                 random_seed = NULL) {
+                                 random_seed = NULL,
+                                 em_convergence_thres = 1e-5) {
   tf$reset_default_graph()
   
   tfd <- tf$contrib$distributions
@@ -332,7 +333,6 @@ inference_tensorflow <- function(Y,
   log_liks <- ll_old <- sess$run(L_y, feed_dict = fd_full)
 
   for(i in seq_len(max_iter_em)) {
-
     ll <- 0 # log likelihood for this "epoch"
     for(b in seq_len(n_batches)) {
       if (!random_effects) {
@@ -388,6 +388,10 @@ inference_tensorflow <- function(Y,
     print(glue("{mi}\tL old: {ll_old}; L new: {ll}; Difference (%): {ll_diff}"))
     ll_old <- ll
     log_liks <- c(log_liks, ll)
+    
+    if (ll_diff < em_convergence_thres) {
+      break
+    }
   }
 
   # Finished EM - peel off final values
