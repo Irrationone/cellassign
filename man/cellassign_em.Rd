@@ -14,7 +14,8 @@ cellassign_em(exprs_obj, rho, s = NULL, X = NULL, control_pct = NULL,
   data_type = c("RNAseq", "MS"), n_batches = 1, rel_tol_adam = 1e-04,
   rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
   learning_rate = 0.1, verbose = TRUE, sce_assay = "counts",
-  gamma_init = NULL, num_runs = 1, em_convergence_thres = 1e-05)
+  gamma_init = NULL, num_runs = 1, em_convergence_thres = 1e-05,
+  min_delta = log(2))
 }
 \arguments{
 \item{exprs_obj}{SingleCellExperiment object}

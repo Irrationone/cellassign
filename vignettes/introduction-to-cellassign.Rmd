@@ -1,6 +1,6 @@
 ---
 title: "Assigning single-cells to known cell types with cellassign"
-author: "Kieran R Campbell and Allen Zhang"
+author: "Allen W Zhang and Kieran R Campbell"
 date: "April 2018"
 output: BiocStyle::html_document
 vignette: >

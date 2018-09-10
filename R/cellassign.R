@@ -223,5 +223,5 @@ print.cellassign_fit <- function(x) {
                    ",
            "To access MLE cell types, call x$cell_type
                   ",
-           "To access MLE parameter estimates, call x$mle_params"))
+           "To access MLE parameter estimates, call x$mle_params\n\n"))
 }

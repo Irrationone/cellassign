@@ -51,7 +51,8 @@ inference_tensorflow <- function(Y,
                                  learning_rate = 1e-4,
                                  gamma_init = NULL,
                                  random_seed = NULL,
-                                 em_convergence_thres = 1e-5) {
+                                 em_convergence_thres = 1e-5,
+                                 min_delta = log(2)) {
   tf$reset_default_graph()
   
   tfd <- tf$contrib$distributions
@@ -92,14 +93,14 @@ inference_tensorflow <- function(Y,
   }
   
   ## Regular variables
-  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = log(log(2)), maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64, 
-                           constraint = function(x) tf$clip_by_value(x, tf$constant(log(log(2)), dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
+  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64, 
+                           constraint = function(x) tf$clip_by_value(x, tf$constant(log(min_delta), dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
 
   beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   beta0 <- tf$Variable(tf$random_normal(shape(G,P0), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   
   
-  mito_delta_log <- tf$Variable(tf$random_uniform(shape(C), minval = log(log(2)), maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  mito_delta_log <- tf$Variable(tf$random_uniform(shape(C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   mito_beta <- tf$Variable(tf$random_normal(shape(P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   
   total_concentration <- tf$Variable(tf$random_uniform(shape(1), minval = 0.5, maxval = 10, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
