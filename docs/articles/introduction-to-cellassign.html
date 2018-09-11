@@ -70,7 +70,7 @@
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1>Assigning single-cells to known cell types with cellassign</h1>
-                        <h4 class="author">Kieran R Campbell and Allen Zhang</h4>
+                        <h4 class="author">Allen W Zhang and Kieran R Campbell</h4>
             
             <h4 class="date">April 2018</h4>
       
@@ -81,130 +81,50 @@
 
     
     
-<p>CellAssign vignette skeleton. Missing descriptions for several components – to be added over the next while.</p>
+<div id="overview" class="section level1">
+<h1 class="hasAnchor">
+<a href="#overview" class="anchor"></a>Overview</h1>
+<p><code>cellassign</code> assigns cells measured using single cell RNA sequencing to known cell types based on marker gene information. Unlike other supervised methods for assigning cell types from single cell RNA-seq data, <code>cellassign</code> does not require labeled single cell or bulk expression data – <code>cellassign</code> only needs to know whether or not each given gene is a marker of each cell type.</p>
+<p><img src="cellassign_schematic.png" width="50%"></p>
+</div>
+<div id="installation" class="section level1">
+<h1 class="hasAnchor">
+<a href="#installation" class="anchor"></a>Installation</h1>
+<p><code>cellassign</code> depends on <code>tensorflow</code>, which can be installed as follows:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="st">"tensorflow"</span>)
+<span class="kw">library</span>(tensorflow)
+<span class="kw"><a href="http://www.rdocumentation.org/packages/tensorflow/topics/install_tensorflow">install_tensorflow</a></span>()</code></pre></div>
+<p>You can confirm that the installation succeeded by running:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sess =<span class="st"> </span>tf<span class="op">$</span><span class="kw">Session</span>()
+hello &lt;-<span class="st"> </span>tf<span class="op">$</span><span class="kw">constant</span>(<span class="st">'Hello, TensorFlow!'</span>)
+sess<span class="op">$</span><span class="kw">run</span>(hello)</code></pre></div>
+<p>For more details see the <a href="https://tensorflow.rstudio.com/tensorflow/articles/installation.html">Rstudio page on tensorflow installation</a>.</p>
+<p><code>cellassign</code> can then be installed using the <code>devtools</code> package via</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">devtools<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/devtools/topics/install_github">install_github</a></span>(<span class="st">"Irrationone/cellassign"</span>)</code></pre></div>
+</div>
+<div id="basic-usage" class="section level1">
+<h1 class="hasAnchor">
+<a href="#basic-usage" class="anchor"></a>Basic usage</h1>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(tidyverse)
-<span class="co">#&gt; ── Attaching packages ──────────────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──</span>
-<span class="co">#&gt; ✔ ggplot2 3.0.0     ✔ purrr   0.2.5</span>
-<span class="co">#&gt; ✔ tibble  1.4.2     ✔ dplyr   0.7.6</span>
-<span class="co">#&gt; ✔ tidyr   0.8.1     ✔ stringr 1.3.1</span>
-<span class="co">#&gt; ✔ readr   1.1.1     ✔ forcats 0.3.0</span>
-<span class="co">#&gt; ── Conflicts ─────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──</span>
-<span class="co">#&gt; ✖ dplyr::filter() masks stats::filter()</span>
-<span class="co">#&gt; ✖ dplyr::lag()    masks stats::lag()</span>
 <span class="kw">library</span>(scater)
-<span class="co">#&gt; Loading required package: SingleCellExperiment</span>
-<span class="co">#&gt; Loading required package: SummarizedExperiment</span>
-<span class="co">#&gt; Loading required package: GenomicRanges</span>
-<span class="co">#&gt; Loading required package: stats4</span>
-<span class="co">#&gt; Loading required package: BiocGenerics</span>
-<span class="co">#&gt; Loading required package: parallel</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt; Attaching package: 'BiocGenerics'</span>
-<span class="co">#&gt; The following objects are masked from 'package:parallel':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     clusterApply, clusterApplyLB, clusterCall, clusterEvalQ,</span>
-<span class="co">#&gt;     clusterExport, clusterMap, parApply, parCapply, parLapply,</span>
-<span class="co">#&gt;     parLapplyLB, parRapply, parSapply, parSapplyLB</span>
-<span class="co">#&gt; The following objects are masked from 'package:dplyr':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     combine, intersect, setdiff, union</span>
-<span class="co">#&gt; The following objects are masked from 'package:stats':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     IQR, mad, sd, var, xtabs</span>
-<span class="co">#&gt; The following objects are masked from 'package:base':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     anyDuplicated, append, as.data.frame, basename, cbind,</span>
-<span class="co">#&gt;     colMeans, colnames, colSums, dirname, do.call, duplicated,</span>
-<span class="co">#&gt;     eval, evalq, Filter, Find, get, grep, grepl, intersect,</span>
-<span class="co">#&gt;     is.unsorted, lapply, lengths, Map, mapply, match, mget, order,</span>
-<span class="co">#&gt;     paste, pmax, pmax.int, pmin, pmin.int, Position, rank, rbind,</span>
-<span class="co">#&gt;     Reduce, rowMeans, rownames, rowSums, sapply, setdiff, sort,</span>
-<span class="co">#&gt;     table, tapply, union, unique, unsplit, which, which.max,</span>
-<span class="co">#&gt;     which.min</span>
-<span class="co">#&gt; Loading required package: S4Vectors</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt; Attaching package: 'S4Vectors'</span>
-<span class="co">#&gt; The following objects are masked from 'package:dplyr':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     first, rename</span>
-<span class="co">#&gt; The following object is masked from 'package:tidyr':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     expand</span>
-<span class="co">#&gt; The following object is masked from 'package:base':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     expand.grid</span>
-<span class="co">#&gt; Loading required package: IRanges</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt; Attaching package: 'IRanges'</span>
-<span class="co">#&gt; The following objects are masked from 'package:dplyr':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     collapse, desc, slice</span>
-<span class="co">#&gt; The following object is masked from 'package:purrr':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     reduce</span>
-<span class="co">#&gt; Loading required package: GenomeInfoDb</span>
-<span class="co">#&gt; Loading required package: Biobase</span>
-<span class="co">#&gt; Welcome to Bioconductor</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     Vignettes contain introductory material; view with</span>
-<span class="co">#&gt;     'browseVignettes()'. To cite Bioconductor, see</span>
-<span class="co">#&gt;     'citation("Biobase")', and for packages 'citation("pkgname")'.</span>
-<span class="co">#&gt; Loading required package: DelayedArray</span>
-<span class="co">#&gt; Loading required package: matrixStats</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt; Attaching package: 'matrixStats'</span>
-<span class="co">#&gt; The following objects are masked from 'package:Biobase':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     anyMissing, rowMedians</span>
-<span class="co">#&gt; The following object is masked from 'package:dplyr':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     count</span>
-<span class="co">#&gt; Loading required package: BiocParallel</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt; Attaching package: 'DelayedArray'</span>
-<span class="co">#&gt; The following objects are masked from 'package:matrixStats':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     colMaxs, colMins, colRanges, rowMaxs, rowMins, rowRanges</span>
-<span class="co">#&gt; The following object is masked from 'package:purrr':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     simplify</span>
-<span class="co">#&gt; The following objects are masked from 'package:base':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     aperm, apply</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt; Attaching package: 'scater'</span>
-<span class="co">#&gt; The following object is masked from 'package:S4Vectors':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     rename</span>
-<span class="co">#&gt; The following objects are masked from 'package:dplyr':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     arrange, filter, mutate, rename</span>
-<span class="co">#&gt; The following object is masked from 'package:stats':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     filter</span>
 <span class="kw">library</span>(splatter)
 <span class="kw">library</span>(edgeR)
-<span class="co">#&gt; Loading required package: limma</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt; Attaching package: 'limma'</span>
-<span class="co">#&gt; The following object is masked from 'package:scater':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     plotMDS</span>
-<span class="co">#&gt; The following object is masked from 'package:BiocGenerics':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     plotMA</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt; Attaching package: 'edgeR'</span>
-<span class="co">#&gt; The following object is masked from 'package:SingleCellExperiment':</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt;     cpm</span>
 <span class="kw">library</span>(cellassign)</code></pre></div>
 <div id="example-data" class="section level2">
 <h2 class="hasAnchor">
 <a href="#example-data" class="anchor"></a>Example data</h2>
-<p>We’ll use example data generated by the <code>splatter</code> package.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">data</span>(example_sce, <span class="dt">package =</span> <span class="st">"cellassign"</span>)</code></pre></div>
-<p>This is a bit of a contrived example – the marker genes are VERY highly overexpressed in each group.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(example_sce)
+<span class="co">#&gt; class: SingleCellExperiment </span>
+<span class="co">#&gt; dim: 1000 500 </span>
+<span class="co">#&gt; metadata(1): params</span>
+<span class="co">#&gt; assays(6): BatchCellMeans BaseCellMeans ... TrueCounts counts</span>
+<span class="co">#&gt; rownames(1000): Gene1 Gene2 ... Gene999 Gene1000</span>
+<span class="co">#&gt; rowData names(6): Gene BaseGeneMean ... DEFacGroup1 DEFacGroup2</span>
+<span class="co">#&gt; colnames(500): Cell1 Cell2 ... Cell499 Cell500</span>
+<span class="co">#&gt; colData names(4): Cell Batch Group ExpLibSize</span>
+<span class="co">#&gt; reducedDimNames(0):</span>
+<span class="co">#&gt; spikeNames(0):</span></code></pre></div>
 <p>We can look at the true group assignments:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">colData</span>(example_sce)<span class="op">$</span>Group <span class="op">%&gt;%</span><span class="st"> </span>table
 <span class="co">#&gt; .</span>
@@ -255,20 +175,26 @@ s &lt;-<span class="st"> </span><span class="kw">sizeFactors</span>(example_sce)
 <a href="#run-cellassign-em" class="anchor"></a>Run CellAssign (EM)</h3>
 <p>The following line runs the EM version of CellAssign.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">em_result &lt;-<span class="st"> </span><span class="kw"><a href="../reference/cellassign_em.html">cellassign_em</a></span>(<span class="dt">exprs_obj =</span> Y, <span class="dt">rho =</span> rho, <span class="dt">s =</span> s, <span class="dt">X =</span> <span class="ot">NULL</span>, <span class="dt">data_type =</span> <span class="st">"RNAseq"</span>, <span class="dt">n_batches =</span> <span class="dv">1</span>, <span class="dt">num_runs =</span> <span class="dv">1</span>, <span class="dt">learning_rate =</span> <span class="fl">1e-2</span>, <span class="dt">use_priors =</span> <span class="ot">TRUE</span>, <span class="dt">prior_type =</span> <span class="st">"shrinkage"</span>, <span class="dt">B =</span> <span class="dv">20</span>, <span class="dt">delta_variance_prior =</span> <span class="ot">TRUE</span>, <span class="dt">verbose =</span> <span class="ot">FALSE</span>)
-<span class="co">#&gt; 1360 L old: -41346.1149831637; L new: -13812.3255522503; Difference (%): 0.665934137756965</span>
-<span class="co">#&gt; 220  L old: -13812.3255522503; L new: -13733.2130135937; Difference (%): 0.00572767694746749</span>
-<span class="co">#&gt; 20   L old: -13733.2130135937; L new: -13732.1887213863; Difference (%): 7.45850374897777e-05</span>
-<span class="co">#&gt; 20   L old: -13732.1887213863; L new: -13731.3764798901; Difference (%): 5.91487280460343e-05</span>
-<span class="co">#&gt; 20   L old: -13731.3764798901; L new: -13730.7296108714; Difference (%): 4.71088255195157e-05</span>
-<span class="co">#&gt; 20   L old: -13730.7296108714; L new: -13730.2113720548; Difference (%): 3.77429919076002e-05</span>
-<span class="co">#&gt; 20   L old: -13730.2113720548; L new: -13729.7929559104; Difference (%): 3.04741225779837e-05</span>
-<span class="co">#&gt; 20   L old: -13729.7929559104; L new: -13729.4518637258; Difference (%): 2.48432140014216e-05</span>
-<span class="co">#&gt; 20   L old: -13729.4518637258; L new: -13729.1705904568; Difference (%): 2.04868535014388e-05</span>
-<span class="co">#&gt; 20   L old: -13729.1705904568; L new: -13728.9355650361; Difference (%): 1.71186903953595e-05</span>
-<span class="co">#&gt; 20   L old: -13728.9355650361; L new: -13728.7362973366; Difference (%): 1.45144318413023e-05</span>
-<span class="co">#&gt; 20   L old: -13728.7362973366; L new: -13728.5646804444; Difference (%): 1.25005600251205e-05</span>
-<span class="co">#&gt; 20   L old: -13728.5646804444; L new: -13728.4143662057; Difference (%): 1.0949013405643e-05</span>
-<span class="co">#&gt; 20   L old: -13728.4143662057; L new: -13728.2800465636; Difference (%): 9.78406088788086e-06</span></code></pre></div>
+<span class="co">#&gt; 1700 L old: -95777.4606566627; L new: -13747.6226932358; Difference (%): 0.856462860896705</span>
+<span class="co">#&gt; 160  L old: -13747.6226932358; L new: -13732.2439003481; Difference (%): 0.00111865107377798</span>
+<span class="co">#&gt; 20   L old: -13732.2439003481; L new: -13731.0976484561; Difference (%): 8.34715651948716e-05</span>
+<span class="co">#&gt; 20   L old: -13731.0976484561; L new: -13730.073740291; Difference (%): 7.45685589951485e-05</span>
+<span class="co">#&gt; 20   L old: -13730.073740291; L new: -13729.1593923303; Difference (%): 6.6594541155014e-05</span>
+<span class="co">#&gt; 20   L old: -13729.1593923303; L new: -13728.3430721807; Difference (%): 5.94588587849388e-05</span>
+<span class="co">#&gt; 20   L old: -13728.3430721807; L new: -13727.6143889607; Difference (%): 5.30787449109908e-05</span>
+<span class="co">#&gt; 20   L old: -13727.6143889607; L new: -13726.9639895314; Difference (%): 4.73789116554296e-05</span>
+<span class="co">#&gt; 20   L old: -13726.9639895314; L new: -13726.3834616731; Difference (%): 4.22910600430623e-05</span>
+<span class="co">#&gt; 20   L old: -13726.3834616731; L new: -13725.8652447581; Difference (%): 3.77533467844424e-05</span>
+<span class="co">#&gt; 20   L old: -13725.8652447581; L new: -13725.4025480415; Difference (%): 3.37098396604904e-05</span>
+<span class="co">#&gt; 20   L old: -13725.4025480415; L new: -13724.9892763117; Difference (%): 3.01099897338412e-05</span>
+<span class="co">#&gt; 20   L old: -13724.9892763117; L new: -13724.6199625209; Difference (%): 2.690812964141e-05</span>
+<span class="co">#&gt; 20   L old: -13724.6199625209; L new: -13724.2897068433; Difference (%): 2.40630107470988e-05</span>
+<span class="co">#&gt; 20   L old: -13724.2897068433; L new: -13723.9941216178; Difference (%): 2.15373787533031e-05</span>
+<span class="co">#&gt; 20   L old: -13723.9941216178; L new: -13723.7292816004; Difference (%): 1.92975904115392e-05</span>
+<span class="co">#&gt; 20   L old: -13723.7292816004; L new: -13723.4916789723; Difference (%): 1.73132698267583e-05</span>
+<span class="co">#&gt; 20   L old: -13723.4916789723; L new: -13723.278182615; Difference (%): 1.55569998033966e-05</span>
+<span class="co">#&gt; 20   L old: -13723.278182615; L new: -13723.0860011984; Difference (%): 1.40040458289358e-05</span>
+<span class="co">#&gt; 20   L old: -13723.0860011984; L new: -13722.912649675; Difference (%): 1.26321093787343e-05</span></code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">em_result<span class="op">$</span>cell_type <span class="op">%&gt;%</span><span class="st"> </span>table
 <span class="co">#&gt; .</span>
 <span class="co">#&gt; Group1 Group2 </span>
@@ -281,6 +207,7 @@ s &lt;-<span class="st"> </span><span class="kw">sizeFactors</span>(example_sce)
 <span class="co">#&gt;   Group2      0    264</span></code></pre></div>
 </div>
 </div>
+</div>
   </div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
@@ -288,9 +215,15 @@ s &lt;-<span class="st"> </span><span class="kw">sizeFactors</span>(example_sce)
       <h2 class="hasAnchor">
 <a href="#tocnav" class="anchor"></a>Contents</h2>
       <ul class="nav nav-pills nav-stacked">
+<li><a href="#overview">Overview</a></li>
+      <li><a href="#installation">Installation</a></li>
+      <li>
+<a href="#basic-usage">Basic usage</a><ul class="nav nav-pills nav-stacked">
 <li><a href="#example-data">Example data</a></li>
       <li><a href="#constructing-a-marker-gene-matrix">Constructing a marker gene matrix</a></li>
       <li><a href="#running-cellassign">Running CellAssign</a></li>
+      </ul>
+</li>
       </ul>
 </div>
       </div>
