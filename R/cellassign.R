@@ -1,15 +1,44 @@
 
 
-#' Assign cells to known cell types
-#' @importFrom methods is
-#' @importFrom SummarizedExperiment assays
-#' @param exprs_obj SingleCellExperiment object
-#' @param rho Marker gene matrix (binary)
-#' @param s Numeric vector of size factors
-#' @param X Numeric matrix of auxiliary variables (NULL for none)
+#' Annotate cells to cell types using cellassign
+#'
+#' Automatically annotate cells to known types based on the expression patterns of
+#' a priori known marker genes.
+#'
+
+#' @param exprs_obj Either a matrix representing gene expression counts or a \code{SummarizedExperiment}.
+#' See details.
+#' @param rho TODO
+#' @param s Numeric vector of cell size factors
+#' @param X Numeric matrix of external covariates. See details.
 #' @param exprs_obj_known SingleCellExperiment object for labeled data (semisupervised)
 #' @param s_known Size factors for labeled cells
 #' @param X_known Auxiliary variables for labeled cells
+#'
+#' @importFrom methods is
+#' @importFrom SummarizedExperiment assays
+#'
+#'
+#' @details
+#' \strong{Input format}
+#' \code{exprs_obj} should be either a \code{SummarizedExperiment} (we recommend the
+#' \code{SingleCellExperiment} package) or a cell (row) by gene (column) matrix of
+#' \emph{raw} RNA-seq counts (do \strong{not} log-transform or otherwise normalize).
+#'
+#' \strong{Cell size factors}
+#' If the cell size factors \code{s} are not provided they are computed using the
+#' \code{computeSumFactors} function from the \code{scran} package.
+#'
+#' \strong{Covariates}
+#' If \code{X} is not \code{NULL} then it should be an \code{N} by \code{P} matrix
+#' of covariates for \code{N} cells and \code{P} covariates. Such a matrix would typically
+#' be returned by a call to \code{model.matrix} \strong{with no intercept}. It is also highly
+#' recommended that any numerical (ie non-factor or one-hot-encoded) covariates be standardized
+#' to have mean 0 and standard deviation 1.
+#'
+#'
+#'
+#'
 #' @export
 cellassign <- function(exprs_obj,
                        rho,
@@ -39,7 +68,7 @@ cellassign <- function(exprs_obj,
                        num_runs = 1,
                        num_hidden_nodes_vb = 50,
                        inference_method = "EM") {
-  
+
   if (inference_method == "VB" & num_runs > 1) {
     warning("Multiple runs are currently unsupported in VB mode.")
   }
@@ -127,7 +156,7 @@ cellassign <- function(exprs_obj,
 
   res <- NULL
   data_type <- match.arg(data_type)
-  
+
   if (!is.null(gamma_init)) {
     gamma_eps <- 1e-3
     gamma_init[gamma_init < gamma_eps] <- gamma_eps
@@ -160,7 +189,7 @@ cellassign <- function(exprs_obj,
                                     max_iter_em = max_iter_em,
                                     learning_rate = learning_rate,
                                     gamma_init = gamma_init)
-        
+
         return(structure(res, class = "cellassign_fit"))
       })
       # Return best result
@@ -168,19 +197,19 @@ cellassign <- function(exprs_obj,
     } else if (inference_method == "VB") {
       variance_multiplier <- 10
       marker_multiplier <- 4
-      
+
       if (is.null(delta_alpha_prior)) {
         delta_alpha_prior <- rho * marker_multiplier
         delta_alpha_prior[delta_alpha_prior == 0] <- 1/exp(1)
       }
-      
+
       if (is.null(delta_beta_prior)) {
         delta_beta_prior <- rho * variance_multiplier
         delta_beta_prior[delta_beta_prior == 0] <- 1
       }
-      
+
       Y_std <- scale(Y)
-      res <- vb_tensorflow(rho_dat = rho, 
+      res <- vb_tensorflow(rho_dat = rho,
                            Y_dat = Y,
                            Y_std_dat = Y_std,
                            s_dat = s,
@@ -196,9 +225,9 @@ cellassign <- function(exprs_obj,
                            n_batches = n_batches,
                            learning_rate = learning_rate,
                            num_hidden_nodes = num_hidden_nodes_vb,
-                           max_adam_epoch = max_adam_epochs, 
-                           period_epochs = period_epochs, 
-                           no_change_rel_thres = no_change_rel_thres, 
+                           max_adam_epoch = max_adam_epochs,
+                           period_epochs = period_epochs,
+                           no_change_rel_thres = no_change_rel_thres,
                            no_change_periods = no_change_periods)
     } else {
       stop("Unrecognized inference method.")
@@ -208,7 +237,7 @@ cellassign <- function(exprs_obj,
     # TODO: Implement GMM for MS data.
     stop("Model for MS data not implemented at the moment.")
   }
-  
+
   return(res)
 }
 

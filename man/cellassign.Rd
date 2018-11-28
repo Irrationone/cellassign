@@ -2,7 +2,7 @@
 % Please edit documentation in R/cellassign.R
 \name{cellassign}
 \alias{cellassign}
-\title{Assign cells to known cell types}
+\title{Annotate cells to cell types using cellassign}
 \usage{
 cellassign(exprs_obj, rho, s = NULL, X = NULL,
   exprs_obj_known = NULL, s_known = NULL, X_known = NULL,
@@ -16,13 +16,14 @@ cellassign(exprs_obj, rho, s = NULL, X = NULL,
   num_hidden_nodes_vb = 50, inference_method = "EM")
 }
 \arguments{
-\item{exprs_obj}{SingleCellExperiment object}
+\item{exprs_obj}{Either a matrix representing gene expression counts or a \code{SummarizedExperiment}.
+See details.}
 
-\item{rho}{Marker gene matrix (binary)}
+\item{rho}{TODO}
 
-\item{s}{Numeric vector of size factors}
+\item{s}{Numeric vector of cell size factors}
 
-\item{X}{Numeric matrix of auxiliary variables (NULL for none)}
+\item{X}{Numeric matrix of external covariates. See details.}
 
 \item{exprs_obj_known}{SingleCellExperiment object for labeled data (semisupervised)}
 
@@ -31,5 +32,23 @@ cellassign(exprs_obj, rho, s = NULL, X = NULL,
 \item{X_known}{Auxiliary variables for labeled cells}
 }
 \description{
-Assign cells to known cell types
+Automatically annotate cells to known types based on the expression patterns of
+a priori known marker genes.
+}
+\details{
+\strong{Input format}
+\code{exprs_obj} should be either a \code{SummarizedExperiment} (we recommend the
+\code{SingleCellExperiment} package) or a cell (row) by gene (column) matrix of
+\emph{raw} RNA-seq counts (do \strong{not} log-transform or otherwise normalize).
+
+\strong{Cell size factors}
+If the cell size factors \code{s} are not provided they are computed using the
+\code{computeSumFactors} function from the \code{scran} package.
+
+\strong{Covariates}
+If \code{X} is not \code{NULL} then it should be an \code{N} by \code{P} matrix
+of covariates for \code{N} cells and \code{P} covariates. Such a matrix would typically
+be returned by a call to \code{model.matrix} \strong{with no intercept}. It is also highly
+recommended that any numerical (ie non-factor or one-hot-encoded) covariates be standardized
+to have mean 0 and standard deviation 1.
 }
