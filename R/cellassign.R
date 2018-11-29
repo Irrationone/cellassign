@@ -5,7 +5,6 @@
 #' Automatically annotate cells to known types based on the expression patterns of
 #' a priori known marker genes.
 #'
-
 #' @param exprs_obj Either a matrix representing gene expression counts or a \code{SummarizedExperiment}.
 #' See details.
 #' @param rho TODO
@@ -47,9 +46,9 @@ cellassign <- function(exprs_obj,
                        exprs_obj_known = NULL,
                        s_known = NULL,
                        X_known = NULL,
-                       delta_alpha_prior = NULL,
-                       delta_beta_prior = NULL,
-                       known_types = NULL,
+                       # delta_alpha_prior = NULL,
+                       # delta_beta_prior = NULL,
+                       # known_types = NULL,
                        data_type = c("RNAseq", "MS"),
                        n_batches = 1,
                        rel_tol_adam = 1e-4,
@@ -60,13 +59,13 @@ cellassign <- function(exprs_obj,
                        period_epochs = 400,
                        no_change_rel_thres = 1e-5,
                        no_change_periods = 2,
-                       num_vb_samples = 10,
+                       # num_vb_samples = 10,
                        learning_rate = 0.1,
                        verbose = TRUE,
                        sce_assay = "counts",
                        gamma_init = NULL,
                        num_runs = 1,
-                       num_hidden_nodes_vb = 50,
+                       # num_hidden_nodes_vb = 50,
                        inference_method = "EM") {
 
   if (inference_method == "VB" & num_runs > 1) {
