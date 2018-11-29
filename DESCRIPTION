@@ -5,15 +5,21 @@ Description: What the package does (one paragraph).
 Authors@R: person("First", "Last", , "first.last@example.com", c("aut", "cre"))
 License: Apache License (>= 2.0)
 Encoding: UTF-8
+Depends: R (>= 2.10)
 Imports:
     methods,
     stats,
     matrixStats,
-    glue
+    glue,
+    tensorflow,
+    SummarizedExperiment,
+    SingleCellExperiment,
+    scran
 Suggests: 
     knitr,
     rmarkdown,
-    BiocStyle
+    BiocStyle,
+    dplyr
 LazyData: true
 ByteCompile: true
 Roxygen: list(markdown = TRUE)

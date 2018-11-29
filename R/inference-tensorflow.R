@@ -17,6 +17,7 @@ entry_stop_gradients <- function(target, mask) {
 #' @import tensorflow
 #' @importFrom glue glue
 #'
+#'
 #' @keywords internal
 inference_tensorflow <- function(Y,
                                  rho,
@@ -26,24 +27,8 @@ inference_tensorflow <- function(Y,
                                  C,
                                  N,
                                  P,
-                                 #control_pct,
-                                 #pct_mito = rep(0, nrow(Y)),
-                                 #mito_rho = rep(0, C),
-                                 #Y0,
-                                 #s0,
-                                 #X0,
-                                 #N0,
-                                 #P0,
-                                 #gamma0,
-                                 #control_pct0,
                                  B = 10,
                                  use_priors,
-                                 #use_mito,
-                                 #prior_type = "regular",
-                                 #delta_log_prior_mean = NULL,
-                                 #delta_log_prior_scale = 1,
-                                 #delta_variance_prior = FALSE,
-                                 #random_effects = FALSE,
                                  verbose = FALSE,
                                  n_batches = 1,
                                  rel_tol_adam = 1e-4,
@@ -51,7 +36,6 @@ inference_tensorflow <- function(Y,
                                  max_iter_adam = 1e5,
                                  max_iter_em = 20,
                                  learning_rate = 1e-4,
-                                 # gamma_init = NULL,
                                  random_seed = NULL,
                                  em_convergence_thres = 1e-5,
                                  min_delta = log(2)) {
@@ -215,7 +199,7 @@ inference_tensorflow <- function(Y,
 
         if(mi %% 20 == 0) {
           if (verbose) {
-            message(paste(mi, sess$run(Q1, feed_dict = gfd), sess$run(Q0, feed_dict = gfd), sep = " "))
+            message(paste(mi, sess$run(Q1, feed_dict = gfd)))
           }
           Q_new <- sess$run(Q, feed_dict = gfd)
           Q_diff = -(Q_new - Q_old) / abs(Q_old)

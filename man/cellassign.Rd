@@ -66,3 +66,16 @@ be returned by a call to \code{model.matrix} \strong{with no intercept}. It is a
 recommended that any numerical (ie non-factor or one-hot-encoded) covariates be standardized
 to have mean 0 and standard deviation 1.
 }
+\examples{
+data(example_sce)
+data(example_rho)
+
+fit <- em_result <- cellassign(example_sce,
+rho = example_rho,
+s = colSums(SummarizedExperiment::assay(example_sce, "counts")),
+learning_rate = 1e-2,
+shrinkage = TRUE,
+verbose = FALSE)
+
+
+}

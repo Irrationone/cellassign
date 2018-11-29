@@ -4,8 +4,18 @@
 \alias{print.cellassign_fit}
 \title{Print a \code{cellassign} fit}
 \usage{
-\method{print}{cellassign_fit}(x)
+\method{print}{cellassign_fit}(x, ...)
+}
+\arguments{
+\item{x}{An object of class \code{cellassign_fit}}
+
+\item{...}{Additional arguments (unused)}
 }
 \description{
 Print a \code{cellassign} fit
+}
+\examples{
+data(example_cellassign_fit)
+print(example_cellassign_fit)
+
 }

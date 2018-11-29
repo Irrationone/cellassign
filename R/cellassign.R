@@ -46,7 +46,16 @@
 #' recommended that any numerical (ie non-factor or one-hot-encoded) covariates be standardized
 #' to have mean 0 and standard deviation 1.
 #'
+#' @examples
+#' data(example_sce)
+#' data(example_rho)
 #'
+#' fit <- em_result <- cellassign(example_sce,
+#' rho = example_rho,
+#' s = colSums(SummarizedExperiment::assay(example_sce, "counts")),
+#' learning_rate = 1e-2,
+#' shrinkage = TRUE,
+#' verbose = FALSE)
 #'
 #'
 #' @export
@@ -119,7 +128,6 @@ cellassign <- function(exprs_obj,
 
 
   run_results <- lapply(1:num_runs, function(i) {
-    # TODO: Only run 1 ADAM iteration per EM generation
     res <- inference_tensorflow(Y = Y,
                                 rho = rho,
                                 s = s,
@@ -128,24 +136,8 @@ cellassign <- function(exprs_obj,
                                 C = C,
                                 N = N,
                                 P = P,
-                                #control_pct = 1-control_pct,
-                                #pct_mito = pct_mito,
-                                #mito_rho = mito_rho,
-                                #Y0 = Y0,
-                                #s0 = s_known,
-                                #X0 = X0,
-                                #N0 = N0,
-                                #P0 = P0,
-                                #gamma0 = gamma0,
                                 B = B,
-                                #control_pct0 = 1-control_pct_known,
                                 use_priors = shrinkage,
-                                #use_mito = use_mito,
-                                #prior_type = prior_type,
-                                #delta_log_prior_mean = delta_log_prior_mean,
-                                #delta_log_prior_scale = delta_log_prior_scale,
-                                #delta_variance_prior = delta_variance_prior,
-                                #random_effects = random_effects,
                                 verbose = verbose,
                                 n_batches = n_batches,
                                 rel_tol_adam = rel_tol_adam,
@@ -153,7 +145,6 @@ cellassign <- function(exprs_obj,
                                 max_iter_adam = max_iter_adam,
                                 max_iter_em = max_iter_em,
                                 learning_rate = learning_rate,
-                                #gamma_init = gamma_init,
                                 em_convergence_thres = rel_tol_em,
                                 min_delta = min_delta)
 
@@ -167,8 +158,16 @@ cellassign <- function(exprs_obj,
 }
 
 #' Print a \code{cellassign} fit
+#'
+#' @param x An object of class \code{cellassign_fit}
+#' @param ... Additional arguments (unused)
+#'
+#' @examples
+#' data(example_cellassign_fit)
+#' print(example_cellassign_fit)
+#'
 #' @export
-print.cellassign_fit <- function(x) {
+print.cellassign_fit <- function(x, ...) {
   N <- nrow(x$mle_params$gamma)
   C <- ncol(x$mle_params$gamma)
   G <- nrow(x$mle_params$delta)
@@ -179,3 +178,33 @@ print.cellassign_fit <- function(x) {
            ",
            "To access MLE parameter estimates, call x$mle_params\n\n"))
 }
+
+
+#' Example SingleCellExperiment
+#'
+#' An example \code{SingleCellExperiment} for 10 marker genes and 500 cells.
+#'
+#' @seealso example_cellassign_fit
+#' @examples
+#' data(example_sce)
+"example_sce"
+
+#' Example cell marker matrix
+#'
+#' An example matrix for 10 genes and 2 cell types showing the membership
+#' of marker genes to cell types
+#'
+#' @seealso example_cellassign_fit
+#' @examples
+#' data(example_rho)
+"example_rho"
+
+#' Example cellassign fit
+#'
+#' An example fit of calling \code{cellassign} on both
+#' \code{example_rho} and \code{example_sce}
+#'
+#' @seealso example_cellassign_fit
+#' @examples
+#' data(example_cellassign_fit)
+"example_cellassign_fit"

@@ -24,6 +24,8 @@
 #'
 #' @return An N by G matrix of simulated counts
 #'
+#' @importFrom stats rnbinom
+#'
 #' @keywords internal
 simulate_cellassign <- function(rho,
                                 s,

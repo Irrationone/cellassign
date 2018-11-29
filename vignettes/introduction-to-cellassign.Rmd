@@ -55,17 +55,15 @@ devtools::install_github("Irrationone/cellassign")
 # Basic usage
 
 ```{r, results='hide', message=FALSE, warning=FALSE}
-library(tidyverse)
-library(scater)
-library(splatter)
-library(edgeR)
+library(SingleCellExperiment)
 library(cellassign)
 ```
 
 ## Example data
 
 ```{r}
-data(example_sce, package = "cellassign")
+data(example_sce)
+data(example_rho)
 ```
 
 ```{r}
@@ -75,7 +73,7 @@ print(example_sce)
 We can look at the true group assignments:
 
 ```{r}
-colData(example_sce)$Group %>% table
+table(colData(example_sce)$Group)
 ```
 
 ## Constructing a marker gene matrix 
@@ -85,31 +83,31 @@ The next step is to construct a binary marker gene matrix that expresses our *a 
 Since we're using simulated data, we can pick genes that we made to be group-specific markers. 
 
 ```{r}
-rowdat <- rowData(example_sce)
-
-markers_group1 <- rowdat %>% as.data.frame %>% dplyr::filter(DEFacGroup1 > 1.3)
-markers_group2 <- rowdat %>% as.data.frame %>% dplyr::filter(DEFacGroup2 > 1.3)
+# rowdat <- as.data.frame(rowData(example_sce))
+# 
+# markers_group1 <- dplyr::filter(rowdat, DEFacGroup1 > 1.3)
+# markers_group2 <- dplyr::filter(rowdat, DEFacGroup2 > 1.3)
 ```
 
 Next, we'll pick a few of these for each group, so as to not give CellAssign all the information. 
 
 ```{r}
-set.seed(4242)
-genes1 <- as.character(sample(markers_group1$Gene, size = 5))
-genes2 <- as.character(sample(markers_group2$Gene, size = 5))
+# set.seed(4242)
+# genes1 <- as.character(sample(markers_group1$Gene, size = 5))
+# genes2 <- as.character(sample(markers_group2$Gene, size = 5))
 ```
 
 ```{r}
-marker_list <- list(
-  'Group1'=genes1,
-  'Group2'=genes2
-)
+# marker_list <- list(
+#   'Group1'=genes1,
+#   'Group2'=genes2
+# )
 ```
 
 We can conveniently convert this list into a binary matrix. 
 
 ```{r}
-rho <- marker_list_to_mat(marker_list, include_other = FALSE)
+# rho <- marker_list_to_mat(marker_list, include_other = FALSE)
 ```
 
 Note that we have explicitly specified to not include an other class here (the default is to include one). 
@@ -118,8 +116,10 @@ Note that we have explicitly specified to not include an other class here (the d
 
 ### Compute size factors
 
-```{r}
-norm_factors <- edgeR::calcNormFactors(as.matrix(counts(example_sce)), method = "TMM")
+TODO: this is done to reduce size
+
+```{r, eval=F}
+norm_factors <- scran::computeSumFactors(example_sce)
 lib_size_factors <- colSums(as.matrix(counts(example_sce)))
 
 sizeFactors(example_sce) <- norm_factors * lib_size_factors / mean(norm_factors * lib_size_factors)
@@ -129,7 +129,7 @@ s <- sizeFactors(example_sce)
 
 ### Extract expression matrix
 
-```{r}
+```{r, eval=FALSE}
 Y <- t(counts(example_sce))[,rownames(rho)]
 ```
 
@@ -138,9 +138,12 @@ Y <- t(counts(example_sce))[,rownames(rho)]
 The following line runs the EM version of CellAssign. 
 
 ```{r}
-devtools::load_all("../")
-em_result <- cellassign(exprs_obj = Y, 
-                        rho = rho, 
+# devtools::load_all("../")
+
+s <- sizeFactors(example_sce)
+
+em_result <- cellassign(exprs_obj = example_sce, 
+                        rho = example_rho, 
                         s = s, 
                         learning_rate = 1e-2, 
                         shrinkage = TRUE,
@@ -148,11 +151,11 @@ em_result <- cellassign(exprs_obj = Y,
 ```
 
 ```{r}
-em_result$cell_type %>% table
+table(em_result$cell_type)
 ```
 
 ```{r}
-example_sce <- example_sce %>% scater::mutate(EM_group=em_result$cell_type)
+example_sce$EM_group <- em_result$cell_type
 ```
 
 ```{r}
