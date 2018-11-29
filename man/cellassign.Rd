@@ -4,16 +4,18 @@
 \alias{cellassign}
 \title{Annotate cells to cell types using cellassign}
 \usage{
-cellassign(exprs_obj, rho, s = NULL, X = NULL,
+cellassign(exprs_obj, rho, s = NULL, X = NULL, control_pct = NULL,
   exprs_obj_known = NULL, s_known = NULL, X_known = NULL,
-  delta_alpha_prior = NULL, delta_beta_prior = NULL,
-  known_types = NULL, data_type = c("RNAseq", "MS"), n_batches = 1,
-  rel_tol_adam = 1e-04, rel_tol_em = 1e-04, max_iter_adam = 1e+05,
-  max_iter_em = 20, max_adam_epochs = 5000, period_epochs = 400,
-  no_change_rel_thres = 1e-05, no_change_periods = 2,
-  num_vb_samples = 10, learning_rate = 0.1, verbose = TRUE,
-  sce_assay = "counts", gamma_init = NULL, num_runs = 1,
-  num_hidden_nodes_vb = 50, inference_method = "EM")
+  control_pct_known = NULL, known_types = NULL, B = 10,
+  pct_mito = NULL, mito_rho = NULL, use_priors = FALSE,
+  use_mito = FALSE, prior_type = "regular",
+  delta_log_prior_mean = NULL, delta_log_prior_scale = 1,
+  delta_variance_prior = FALSE, random_effects = FALSE,
+  data_type = c("RNAseq", "MS"), n_batches = 1, rel_tol_adam = 1e-04,
+  rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
+  learning_rate = 0.1, verbose = TRUE, sce_assay = "counts",
+  gamma_init = NULL, num_runs = 1, em_convergence_thres = 1e-05,
+  min_delta = log(2))
 }
 \arguments{
 \item{exprs_obj}{Either a matrix representing gene expression counts or a \code{SummarizedExperiment}.

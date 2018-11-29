@@ -1,5 +1,3 @@
-
-
 #' Annotate cells to cell types using cellassign
 #'
 #' Automatically annotate cells to known types based on the expression patterns of
@@ -40,37 +38,38 @@
 #'
 #' @export
 cellassign <- function(exprs_obj,
-                       rho,
-                       s = NULL,
-                       X = NULL,
-                       exprs_obj_known = NULL,
-                       s_known = NULL,
-                       X_known = NULL,
-                       # delta_alpha_prior = NULL,
-                       # delta_beta_prior = NULL,
-                       # known_types = NULL,
-                       data_type = c("RNAseq", "MS"),
-                       n_batches = 1,
-                       rel_tol_adam = 1e-4,
-                       rel_tol_em = 1e-4,
-                       max_iter_adam = 1e5,
-                       max_iter_em = 20,
-                       max_adam_epochs = 5e3,
-                       period_epochs = 400,
-                       no_change_rel_thres = 1e-5,
-                       no_change_periods = 2,
-                       # num_vb_samples = 10,
-                       learning_rate = 0.1,
-                       verbose = TRUE,
-                       sce_assay = "counts",
-                       gamma_init = NULL,
-                       num_runs = 1,
-                       # num_hidden_nodes_vb = 50,
-                       inference_method = "EM") {
-
-  if (inference_method == "VB" & num_runs > 1) {
-    warning("Multiple runs are currently unsupported in VB mode.")
-  }
+                          rho,
+                          s = NULL,
+                          X = NULL,
+                          control_pct = NULL,
+                          exprs_obj_known = NULL,
+                          s_known = NULL,
+                          X_known = NULL,
+                          control_pct_known = NULL,
+                          known_types = NULL,
+                          B = 10,
+                          pct_mito = NULL,
+                          mito_rho = NULL,
+                          use_priors = FALSE,
+                          use_mito = FALSE,
+                          prior_type = "regular",
+                          delta_log_prior_mean = NULL,
+                          delta_log_prior_scale = 1,
+                          delta_variance_prior = FALSE,
+                          random_effects = FALSE,
+                          data_type = c("RNAseq", "MS"),
+                          n_batches = 1,
+                          rel_tol_adam = 1e-4,
+                          rel_tol_em = 1e-4,
+                          max_iter_adam = 1e5,
+                          max_iter_em = 20,
+                          learning_rate = 0.1,
+                          verbose = TRUE,
+                          sce_assay = "counts",
+                          gamma_init = NULL,
+                          num_runs = 1,
+                          em_convergence_thres = 1e-5,
+                          min_delta = log(2)) {
 
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
@@ -137,6 +136,10 @@ cellassign <- function(exprs_obj,
     s <- scran::computeSumFactors(t(Y))
   }
 
+  if (is.null(control_pct)) {
+    control_pct <- rep(0, N)
+  }
+
   if (is.null(s_known)) {
     if (N0 > 0) {
       message("No size factors supplied - computing from matrix. It is highly recommended to supply size factors calculated using the full gene set")
@@ -144,6 +147,10 @@ cellassign <- function(exprs_obj,
     } else {
       s_known <- numeric(0)
     }
+  }
+
+  if (is.null(control_pct_known)) {
+    control_pct_known <- numeric(0)
   }
 
   if (any(!known_types %in% colnames(rho))) {
@@ -162,77 +169,61 @@ cellassign <- function(exprs_obj,
     gamma_init <- gamma_init/rowSums(gamma_init)
   }
 
-  if(data_type == "RNAseq") {
-    if (inference_method == "EM") {
-      run_results <- lapply(1:num_runs, function(i) {
-        # TODO: Only run 1 ADAM iteration per EM generation
-        res <- inference_tensorflow(Y = Y,
-                                    rho = rho,
-                                    s = s,
-                                    X = X,
-                                    G = G,
-                                    C = C,
-                                    N = N,
-                                    P = P,
-                                    Y0 = Y0,
-                                    s0 = s_known,
-                                    X0 = X0,
-                                    N0 = N0,
-                                    P0 = P0,
-                                    gamma0 = gamma0,
-                                    verbose = verbose,
-                                    n_batches = n_batches,
-                                    rel_tol_adam = rel_tol_adam,
-                                    rel_tol_em = rel_tol_em,
-                                    max_iter_adam = max_iter_adam,
-                                    max_iter_em = max_iter_em,
-                                    learning_rate = learning_rate,
-                                    gamma_init = gamma_init)
-
-        return(structure(res, class = "cellassign_fit"))
-      })
-      # Return best result
-      res <- run_results[[which.max(sapply(run_results, function(x) x$lls[length(x$lls)]))]]
-    } else if (inference_method == "VB") {
-      variance_multiplier <- 10
-      marker_multiplier <- 4
-
-      if (is.null(delta_alpha_prior)) {
-        delta_alpha_prior <- rho * marker_multiplier
-        delta_alpha_prior[delta_alpha_prior == 0] <- 1/exp(1)
-      }
-
-      if (is.null(delta_beta_prior)) {
-        delta_beta_prior <- rho * variance_multiplier
-        delta_beta_prior[delta_beta_prior == 0] <- 1
-      }
-
-      Y_std <- scale(Y)
-      res <- vb_tensorflow(rho_dat = rho,
-                           Y_dat = Y,
-                           Y_std_dat = Y_std,
-                           s_dat = s,
-                           X_dat = X,
-                           delta_alpha_dat = delta_alpha_prior,
-                           delta_beta_dat = delta_beta_prior,
-                           G = G,
-                           C = C,
-                           N = N,
-                           P = P,
-                           S = num_vb_samples,
-                           verbose = verbose,
-                           n_batches = n_batches,
-                           learning_rate = learning_rate,
-                           num_hidden_nodes = num_hidden_nodes_vb,
-                           max_adam_epoch = max_adam_epochs,
-                           period_epochs = period_epochs,
-                           no_change_rel_thres = no_change_rel_thres,
-                           no_change_periods = no_change_periods)
-    } else {
-      stop("Unrecognized inference method.")
-    }
+  if (!is.null(pct_mito)) {
+    mito_eps <- 1e-5
+    pct_mito <- pct_mito/100
+    pct_mito[pct_mito < mito_eps] <- mito_eps
+    pct_mito[pct_mito > (1-mito_eps)] <- 1-mito_eps
+  } else {
+    pct_mito <- rep(0, N)
+    mito_rho <- rep(0, C)
   }
-  if(data_type == "MS") {
+
+  if(data_type == "RNAseq") {
+    run_results <- lapply(1:num_runs, function(i) {
+      # TODO: Only run 1 ADAM iteration per EM generation
+      res <- inference_tensorflow(Y = Y,
+                                  rho = rho,
+                                  s = s,
+                                  X = X,
+                                  G = G,
+                                  C = C,
+                                  N = N,
+                                  P = P,
+                                  control_pct = 1-control_pct,
+                                  pct_mito = pct_mito,
+                                  mito_rho = mito_rho,
+                                  Y0 = Y0,
+                                  s0 = s_known,
+                                  X0 = X0,
+                                  N0 = N0,
+                                  P0 = P0,
+                                  gamma0 = gamma0,
+                                  B = B,
+                                  control_pct0 = 1-control_pct_known,
+                                  use_priors = use_priors,
+                                  use_mito = use_mito,
+                                  prior_type = prior_type,
+                                  delta_log_prior_mean = delta_log_prior_mean,
+                                  delta_log_prior_scale = delta_log_prior_scale,
+                                  delta_variance_prior = delta_variance_prior,
+                                  random_effects = random_effects,
+                                  verbose = verbose,
+                                  n_batches = n_batches,
+                                  rel_tol_adam = rel_tol_adam,
+                                  rel_tol_em = rel_tol_em,
+                                  max_iter_adam = max_iter_adam,
+                                  max_iter_em = max_iter_em,
+                                  learning_rate = learning_rate,
+                                  gamma_init = gamma_init,
+                                  em_convergence_thres = em_convergence_thres,
+                                  min_delta = min_delta)
+
+      return(structure(res, class = "cellassign_fit"))
+    })
+    # Return best result
+    res <- run_results[[which.max(sapply(run_results, function(x) x$lls[length(x$lls)]))]]
+  } else if (data_type == "MS") {
     # TODO: Implement GMM for MS data.
     stop("Model for MS data not implemented at the moment.")
   }
@@ -240,16 +231,16 @@ cellassign <- function(exprs_obj,
   return(res)
 }
 
+#' Print a \code{cellassign} fit
 #' @export
-#' @importFrom glue glue
 print.cellassign_fit <- function(x) {
   N <- nrow(x$mle_params$gamma)
   C <- ncol(x$mle_params$gamma)
   G <- nrow(x$mle_params$delta)
   P <- ncol(x$mle_params$beta) - 1
-  cat(glue("A cellassign fit for {N} cells, {G} genes, {C} cell types with {P} covariates
-                   ",
+  cat(glue::glue("A cellassign fit for {N} cells, {G} genes, {C} cell types with {P} covariates
+           ",
            "To access MLE cell types, call x$cell_type
-                  ",
+           ",
            "To access MLE parameter estimates, call x$mle_params\n\n"))
 }
