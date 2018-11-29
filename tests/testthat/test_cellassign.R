@@ -33,6 +33,10 @@ test_that("cellassign(...) returns a valid object", {
 })
 
 test_that("marker_gene_list() works as required", {
+
+  data(example_sce)
+  data(example_rho)
+
   marker_gene_list <- list(
     Group1 = c("Gene186", "Gene269", "Gene526", "Gene536", "Gene994"),
     Group2 = c("Gene205", "Gene575", "Gene754", "Gene773", "Gene949")
@@ -47,5 +51,11 @@ test_that("marker_gene_list() works as required", {
   expect_equal(length(setdiff(unlist(marker_gene_list), rownames(mat))), 0)
 
   expect_equal(sum(mat), length(unique(unlist(marker_gene_list))))
+
+  fit <- cellassign(example_sce,
+                    marker_gene_list,
+                    s = sizeFactors(example_sce),
+                    max_iter_adam = 2,
+                    max_iter_em = 2)
 
 })

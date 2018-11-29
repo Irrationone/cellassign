@@ -7,7 +7,8 @@
 #' @param exprs_obj Either a matrix representing gene
 #' expression counts or a \code{SummarizedExperiment}.
 #' See details.
-#' @param rho TODO
+#' @param marker_gene_info Information relating marker genes to cell types.
+#' See details.
 #' @param s Numeric vector of cell size factors
 #' @param min_delta The minimum log fold change a marker gene must
 #' be over-expressed by in its cell type
@@ -45,6 +46,15 @@
 #' cell (row) by gene (column) matrix of
 #' \emph{raw} RNA-seq counts (do \strong{not}
 #' log-transform or otherwise normalize).
+#'
+#' \code{marker_gene_info} should either be
+#' \itemize{
+#' \item A gene by cell type binary matrix, where a 1 indicates that a gene is a
+#' marker for a cell type, and 0 otherwise
+#' \item A list with names corresponding to cell types, where each entry is a
+#' vector of marker gene names. These are converted to the above matrix using
+#' the \code{marker_list_to_mat} function.
+#' }
 #'
 #' \strong{Cell size factors}
 #' If the cell size factors \code{s} are
@@ -87,21 +97,21 @@
 #' @return
 #' An object of class \code{cellassign_fit}. See \code{details}
 cellassign <- function(exprs_obj,
-                          rho,
-                          s = NULL,
-                          min_delta = log(2),
-                          X = NULL,
-                          B = 10,
-                          shrinkage = FALSE,
-                          n_batches = 1,
-                          rel_tol_adam = 1e-4,
-                          rel_tol_em = 1e-4,
-                          max_iter_adam = 1e5,
-                          max_iter_em = 20,
-                          learning_rate = 0.1,
-                          verbose = TRUE,
-                          sce_assay = "counts",
-                          num_runs = 1) {
+                        marker_gene_info,
+                        s = NULL,
+                        min_delta = log(2),
+                        X = NULL,
+                        B = 10,
+                        shrinkage = FALSE,
+                        n_batches = 1,
+                        rel_tol_adam = 1e-4,
+                        rel_tol_em = 1e-4,
+                        max_iter_adam = 1e5,
+                        max_iter_em = 20,
+                        learning_rate = 0.1,
+                        verbose = TRUE,
+                        sce_assay = "counts",
+                        num_runs = 1) {
 
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
@@ -112,6 +122,16 @@ cellassign <- function(exprs_obj,
     if(!(is.matrix(X) && is.numeric(X))) {
       stop("X must either be NULL or a numeric matrix")
     }
+  }
+
+  # Work out rho
+  rho <- NULL
+  if(is.matrix(marker_gene_info)) {
+    rho <- marker_gene_info
+  } else if(is.list(marker_gene_info)) {
+    rho <- marker_list_to_mat(marker_gene_info, include_other = FALSE)
+  } else {
+    stop("marker_gene_info must either be a matrix or list. See ?cellassign")
   }
 
 

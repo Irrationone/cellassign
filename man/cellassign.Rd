@@ -4,18 +4,19 @@
 \alias{cellassign}
 \title{Annotate cells to cell types using cellassign}
 \usage{
-cellassign(exprs_obj, rho, s = NULL, min_delta = log(2), X = NULL,
-  B = 10, shrinkage = FALSE, n_batches = 1, rel_tol_adam = 1e-04,
-  rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
-  learning_rate = 0.1, verbose = TRUE, sce_assay = "counts",
-  num_runs = 1)
+cellassign(exprs_obj, marker_gene_info, s = NULL, min_delta = log(2),
+  X = NULL, B = 10, shrinkage = FALSE, n_batches = 1,
+  rel_tol_adam = 1e-04, rel_tol_em = 1e-04, max_iter_adam = 1e+05,
+  max_iter_em = 20, learning_rate = 0.1, verbose = TRUE,
+  sce_assay = "counts", num_runs = 1)
 }
 \arguments{
 \item{exprs_obj}{Either a matrix representing gene
 expression counts or a \code{SummarizedExperiment}.
 See details.}
 
-\item{rho}{TODO}
+\item{marker_gene_info}{Information relating marker genes to cell types.
+See details.}
 
 \item{s}{Numeric vector of cell size factors}
 
@@ -68,6 +69,15 @@ a priori known marker genes.
 cell (row) by gene (column) matrix of
 \emph{raw} RNA-seq counts (do \strong{not}
 log-transform or otherwise normalize).
+
+\code{marker_gene_info} should either be
+\itemize{
+\item A gene by cell type binary matrix, where a 1 indicates that a gene is a
+marker for a cell type, and 0 otherwise
+\item A list with names corresponding to cell types, where each entry is a
+vector of marker gene names. These are converted to the above matrix using
+the \code{marker_list_to_mat} function.
+}
 
 \strong{Cell size factors}
 If the cell size factors \code{s} are
