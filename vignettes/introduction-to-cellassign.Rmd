@@ -100,7 +100,7 @@ We then call `cellassign` using the `cellassign()` function, passing in the abov
 s <- sizeFactors(example_sce)
 
 fit <- cellassign(exprs_obj = example_sce, 
-                        rho = example_rho, 
+                        marker_gene_info = example_rho, 
                         s = s, 
                         learning_rate = 1e-2, 
                         shrinkage = TRUE,
@@ -202,7 +202,7 @@ Note we explicitly set no intercept by passing in `0` in the beginning. We can t
 
 ```{r, eval = FALSE}
 fit <- cellassign(exprs_obj = example_sce, 
-                  rho = example_rho, 
+                  marker_gene_info = example_rho, 
                   X = X,
                   s = s, 
                   learning_rate = 1e-2, 

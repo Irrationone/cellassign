@@ -25,7 +25,7 @@ devtools::install_github("Irrationone/cellassign")
 `cellassign` requires the following inputs:
 
 * `exprs_obj`: Cell-by-gene matrix of raw counts (or SingleCellExperiment with `counts` assay)
-* `rho`: Binary gene-by-celltype marker gene matrix
+* `marker_gene_info`: Binary gene-by-celltype marker gene matrix or list relating cell types to marker genes
 * `s`: Size factors
 * `X`: Design matrix for any patient/batch specific effects
 
@@ -33,7 +33,7 @@ The model can be run as follows:
 
 ``` r
 cas <- cellassign_em(exprs_obj = gene_expression_data,
-                    rho = rho,
+                    marker_gene_info = marker_gene_info,
                     s = s,
                     X = X)
 ```
