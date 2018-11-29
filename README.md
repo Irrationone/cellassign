@@ -1,5 +1,7 @@
 # cellassign
 
+[![Build Status](https://travis-ci.com/Irrationone/cellassign.svg?token=HqeTkKNZ9uXDwGpFxagC&branch=bioc-ready)](https://travis-ci.com/Irrationone/cellassign)
+
 `cellassign` automatically assigns single-cell RNA-seq data to known cell types across thousands of cells accounting for patient and batch specific effects. Information about *a priori* known markers cell types is provided as input to the model in the form of a (binary) marker gene by cell-type matrix. `cellassign` then probabilistically assigns each cell to a cell type, removing subjective biases from typical unsupervised clustering workflows.
 
 # Getting started
