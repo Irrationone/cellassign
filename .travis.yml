@@ -1,0 +1,37 @@
+sudo: required
+language: r
+warnings_are_errors: false
+dist: trusty
+r: bioc-devel
+
+r_packages:
+  - devtools
+  - tensorflow
+  - rmarkdown
+
+biocpackages:
+  - SingleCellExperiment
+
+
+cache:
+  packages: true
+  directories:
+    - $HOME/.cache/pip
+
+addons:
+  apt:
+    sources:
+      ubuntu-toolchain-r-test
+    packages:
+      - libmagick++-dev
+      - wget
+      - libatlas3gf-base
+      - libatlas-dev
+      - python-joblib
+      - python-dev
+      - libv8-dev
+
+before_install:
+  - python -m pip install --user --upgrade pip
+  - pip install --user numpy
+  - pip install --user tensorflow
