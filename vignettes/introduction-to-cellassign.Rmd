@@ -138,7 +138,13 @@ Y <- t(counts(example_sce))[,rownames(rho)]
 The following line runs the EM version of CellAssign. 
 
 ```{r}
-em_result <- cellassign_em(exprs_obj = Y, rho = rho, s = s, X = NULL, data_type = "RNAseq", n_batches = 1, num_runs = 1, learning_rate = 1e-2, use_priors = TRUE, prior_type = "shrinkage", B = 20, delta_variance_prior = TRUE, verbose = FALSE)
+devtools::load_all("../")
+em_result <- cellassign(exprs_obj = Y, 
+                        rho = rho, 
+                        s = s, 
+                        learning_rate = 1e-2, 
+                        shrinkage = TRUE,
+                        verbose = FALSE)
 ```
 
 ```{r}
