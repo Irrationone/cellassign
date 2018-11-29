@@ -6,6 +6,9 @@
 \usage{
 extract_expression_matrix(exprs_obj, sce_assay = "counts")
 }
+\value{
+The cleaned expression matrix (of counts) from whatever input to \code{cellassign}
+}
 \description{
 Extract expression matrix from expression object
 }

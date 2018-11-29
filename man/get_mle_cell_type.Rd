@@ -6,6 +6,10 @@
 \usage{
 get_mle_cell_type(gamma)
 }
+\value{
+A vector of MLE cell types, where the names are
+taken from the column names of the input matrix
+}
 \description{
 Get MLE estimates of type of each cell
 }

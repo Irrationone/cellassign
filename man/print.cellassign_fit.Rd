@@ -11,6 +11,9 @@
 
 \item{...}{Additional arguments (unused)}
 }
+\value{
+Prints a structured representation of the \code{cellassign_fit}
+}
 \description{
 Print a \code{cellassign} fit
 }

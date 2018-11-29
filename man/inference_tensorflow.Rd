@@ -10,6 +10,10 @@ inference_tensorflow(Y, rho, s, X, G, C, N, P, B = 10, use_priors,
   learning_rate = 1e-04, random_seed = NULL,
   em_convergence_thres = 1e-05, min_delta = log(2))
 }
+\value{
+A list of MLE cell type calls, MLE parameter estimates,
+and log likelihoods during optimization.
+}
 \description{
 cellassign inference in tensorflow, semi-supervised version
 }

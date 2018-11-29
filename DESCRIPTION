@@ -1,25 +1,33 @@
 Package: cellassign
-Version: 0.0.0.9000
+Version: 0.99.0
 Title: What the Package Does (One Line, Title Case)
 Description: What the package does (one paragraph).
-Authors@R: person("First", "Last", , "first.last@example.com", c("aut", "cre"))
+Authors@R: c(
+  person("Allen", "Zhang", email = "alzhang@bccrc.ca", role = c("aut")),
+  person("Kieran", "Campbell", email = "kieranrcampbell@gmail.com", role = c("aut", "cre"))
+  )
 License: Apache License (>= 2.0)
 Encoding: UTF-8
-Depends: R (>= 2.10)
+Depends: R (>= 3.5)
 Imports:
     methods,
     stats,
-    matrixStats,
     glue,
     tensorflow,
     SummarizedExperiment,
-    SingleCellExperiment,
     scran
 Suggests: 
     knitr,
+    SingleCellExperiment,
     rmarkdown,
     BiocStyle,
     dplyr
+biocViews:
+  Software, 
+  Transcriptomics, 
+  GeneExpression, 
+  RNASeq,
+  SingleCell
 LazyData: true
 ByteCompile: true
 Roxygen: list(markdown = TRUE)

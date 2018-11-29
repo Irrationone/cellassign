@@ -11,28 +11,34 @@ cellassign(exprs_obj, rho, s = NULL, min_delta = log(2), X = NULL,
   num_runs = 1)
 }
 \arguments{
-\item{exprs_obj}{Either a matrix representing gene expression counts or a \code{SummarizedExperiment}.
+\item{exprs_obj}{Either a matrix representing gene
+expression counts or a \code{SummarizedExperiment}.
 See details.}
 
 \item{rho}{TODO}
 
 \item{s}{Numeric vector of cell size factors}
 
-\item{min_delta}{The minimum log fold change a marker gene must be over-expressed by in its cell type}
+\item{min_delta}{The minimum log fold change a marker gene must
+be over-expressed by in its cell type}
 
 \item{X}{Numeric matrix of external covariates. See details.}
 
 \item{B}{Number of bases to use for RBF dispersion function}
 
-\item{shrinkage}{Logical - should the delta parameters have hierarchical shrinkage?}
+\item{shrinkage}{Logical - should the delta parameters
+have hierarchical shrinkage?}
 
 \item{n_batches}{Number of data subsample batches to use in inference}
 
-\item{rel_tol_adam}{The change in Q function value (in pct) below which each optimization round is considered converged}
+\item{rel_tol_adam}{The change in Q function value (in pct) below which
+each optimization round is considered converged}
 
-\item{rel_tol_em}{The change in log marginal likelihood value (in pct) below which the EM algorithm is considered converged}
+\item{rel_tol_em}{The change in log marginal likelihood value (in pct)
+below which the EM algorithm is considered converged}
 
-\item{max_iter_adam}{Maximum number of ADAM iterations to perform in each M-step}
+\item{max_iter_adam}{Maximum number of ADAM iterations
+to perform in each M-step}
 
 \item{max_iter_em}{Maximum number of EM iterations to perform}
 
@@ -40,31 +46,52 @@ See details.}
 
 \item{verbose}{Logical - should running info be printed?}
 
-\item{sce_assay}{The \code{assay} from the input \code{SingleCellExperiment} to use: this assay
+\item{sce_assay}{The \code{assay} from the input
+\code{SingleCellExperiment} to use: this assay
 should always represent raw counts.}
 
 \item{num_runs}{Number of EM runs to perform}
 }
+\value{
+An object of class \code{cellassign_fit}. See \code{details}
+}
 \description{
-Automatically annotate cells to known types based on the expression patterns of
+Automatically annotate cells to known types based
+on the expression patterns of
 a priori known marker genes.
 }
 \details{
 \strong{Input format}
-\code{exprs_obj} should be either a \code{SummarizedExperiment} (we recommend the
-\code{SingleCellExperiment} package) or a cell (row) by gene (column) matrix of
-\emph{raw} RNA-seq counts (do \strong{not} log-transform or otherwise normalize).
+\code{exprs_obj} should be either a
+\code{SummarizedExperiment} (we recommend the
+\code{SingleCellExperiment} package) or a
+cell (row) by gene (column) matrix of
+\emph{raw} RNA-seq counts (do \strong{not}
+log-transform or otherwise normalize).
 
 \strong{Cell size factors}
-If the cell size factors \code{s} are not provided they are computed using the
-\code{computeSumFactors} function from the \code{scran} package.
+If the cell size factors \code{s} are
+not provided they are computed using the
+\code{computeSumFactors} function from
+the \code{scran} package.
 
 \strong{Covariates}
-If \code{X} is not \code{NULL} then it should be an \code{N} by \code{P} matrix
-of covariates for \code{N} cells and \code{P} covariates. Such a matrix would typically
-be returned by a call to \code{model.matrix} \strong{with no intercept}. It is also highly
-recommended that any numerical (ie non-factor or one-hot-encoded) covariates be standardized
+If \code{X} is not \code{NULL} then it should be
+an \code{N} by \code{P} matrix
+of covariates for \code{N} cells and \code{P} covariates.
+Such a matrix would typically
+be returned by a call to \code{model.matrix}
+\strong{with no intercept}. It is also highly
+recommended that any numerical (ie non-factor or one-hot-encoded)
+covariates be standardized
 to have mean 0 and standard deviation 1.
+
+\strong{cellassign_fit}
+A call to \code{cellassign} returns an object
+of class \code{cellassign_fit}. To access the
+MLE estimates of cell types, call \code{fit$cell_type}.
+To access all MLE parameter
+estimates, call \code{fit$mle_params}.
 }
 \examples{
 data(example_sce)

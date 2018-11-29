@@ -6,6 +6,9 @@
 \usage{
 initialize_X(X, N, verbose = FALSE)
 }
+\value{
+A cleaned covariate matrix given the input provided by the user
+}
 \description{
 Create X matrix
 }

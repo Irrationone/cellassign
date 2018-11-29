@@ -17,6 +17,8 @@ entry_stop_gradients <- function(target, mask) {
 #' @import tensorflow
 #' @importFrom glue glue
 #'
+#' @return A list of MLE cell type calls, MLE parameter estimates,
+#' and log likelihoods during optimization.
 #'
 #' @keywords internal
 inference_tensorflow <- function(Y,

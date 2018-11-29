@@ -64,7 +64,7 @@ simulate_cellassign <- function(rho,
 
   phi <- apply(a * exp(sweep((sweep(mean_mat_tiled, 3, basis_means))^2, 3, -b, '*')), c(1:2), sum) + LOWER_BOUND
 
-  counts <- sapply(seq_len(G), function(g) {
+  counts <- vapply(seq_len(G), function(g) {
     rnbinom(N, mu = mean_mat[,g], size = phi[g,])
   })
 

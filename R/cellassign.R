@@ -1,24 +1,32 @@
 #' Annotate cells to cell types using cellassign
 #'
-#' Automatically annotate cells to known types based on the expression patterns of
+#' Automatically annotate cells to known types based
+#' on the expression patterns of
 #' a priori known marker genes.
 #'
-#' @param exprs_obj Either a matrix representing gene expression counts or a \code{SummarizedExperiment}.
+#' @param exprs_obj Either a matrix representing gene
+#' expression counts or a \code{SummarizedExperiment}.
 #' See details.
 #' @param rho TODO
 #' @param s Numeric vector of cell size factors
-#' @param min_delta The minimum log fold change a marker gene must be over-expressed by in its cell type
+#' @param min_delta The minimum log fold change a marker gene must
+#' be over-expressed by in its cell type
 #' @param X Numeric matrix of external covariates. See details.
 #' @param B Number of bases to use for RBF dispersion function
-#' @param shrinkage Logical - should the delta parameters have hierarchical shrinkage?
+#' @param shrinkage Logical - should the delta parameters
+#' have hierarchical shrinkage?
 #' @param n_batches Number of data subsample batches to use in inference
-#' @param rel_tol_adam The change in Q function value (in pct) below which each optimization round is considered converged
-#' @param rel_tol_em The change in log marginal likelihood value (in pct) below which the EM algorithm is considered converged
-#' @param max_iter_adam Maximum number of ADAM iterations to perform in each M-step
+#' @param rel_tol_adam The change in Q function value (in pct) below which
+#' each optimization round is considered converged
+#' @param rel_tol_em The change in log marginal likelihood value (in pct)
+#'  below which the EM algorithm is considered converged
+#' @param max_iter_adam Maximum number of ADAM iterations
+#' to perform in each M-step
 #' @param max_iter_em Maximum number of EM iterations to perform
 #' @param learning_rate Learning rate of ADAM optimization
 #' @param verbose Logical - should running info be printed?
-#' @param sce_assay The \code{assay} from the input \code{SingleCellExperiment} to use: this assay
+#' @param sce_assay The \code{assay} from the input
+#' \code{SingleCellExperiment} to use: this assay
 #' should always represent raw counts.
 #' @param num_runs Number of EM runs to perform
 #'
@@ -31,20 +39,36 @@
 #'
 #' @details
 #' \strong{Input format}
-#' \code{exprs_obj} should be either a \code{SummarizedExperiment} (we recommend the
-#' \code{SingleCellExperiment} package) or a cell (row) by gene (column) matrix of
-#' \emph{raw} RNA-seq counts (do \strong{not} log-transform or otherwise normalize).
+#' \code{exprs_obj} should be either a
+#' \code{SummarizedExperiment} (we recommend the
+#' \code{SingleCellExperiment} package) or a
+#' cell (row) by gene (column) matrix of
+#' \emph{raw} RNA-seq counts (do \strong{not}
+#' log-transform or otherwise normalize).
 #'
 #' \strong{Cell size factors}
-#' If the cell size factors \code{s} are not provided they are computed using the
-#' \code{computeSumFactors} function from the \code{scran} package.
+#' If the cell size factors \code{s} are
+#' not provided they are computed using the
+#' \code{computeSumFactors} function from
+#' the \code{scran} package.
 #'
 #' \strong{Covariates}
-#' If \code{X} is not \code{NULL} then it should be an \code{N} by \code{P} matrix
-#' of covariates for \code{N} cells and \code{P} covariates. Such a matrix would typically
-#' be returned by a call to \code{model.matrix} \strong{with no intercept}. It is also highly
-#' recommended that any numerical (ie non-factor or one-hot-encoded) covariates be standardized
+#' If \code{X} is not \code{NULL} then it should be
+#'  an \code{N} by \code{P} matrix
+#' of covariates for \code{N} cells and \code{P} covariates.
+#' Such a matrix would typically
+#' be returned by a call to \code{model.matrix}
+#' \strong{with no intercept}. It is also highly
+#' recommended that any numerical (ie non-factor or one-hot-encoded)
+#' covariates be standardized
 #' to have mean 0 and standard deviation 1.
+#'
+#' \strong{cellassign_fit}
+#' A call to \code{cellassign} returns an object
+#' of class \code{cellassign_fit}. To access the
+#' MLE estimates of cell types, call \code{fit$cell_type}.
+#'  To access all MLE parameter
+#' estimates, call \code{fit$mle_params}.
 #'
 #' @examples
 #' data(example_sce)
@@ -59,6 +83,9 @@
 #'
 #'
 #' @export
+#'
+#' @return
+#' An object of class \code{cellassign_fit}. See \code{details}
 cellassign <- function(exprs_obj,
                           rho,
                           s = NULL,
@@ -127,7 +154,7 @@ cellassign <- function(exprs_obj,
   res <- NULL
 
 
-  run_results <- lapply(1:num_runs, function(i) {
+  run_results <- lapply(seq_len(num_runs), function(i) {
     res <- inference_tensorflow(Y = Y,
                                 rho = rho,
                                 s = s,
@@ -151,7 +178,7 @@ cellassign <- function(exprs_obj,
     return(structure(res, class = "cellassign_fit"))
   })
   # Return best result
-  res <- run_results[[which.max(sapply(run_results, function(x) x$lls[length(x$lls)]))]]
+  res <- run_results[[which.max(vapply(run_results, function(x) x$lls[length(x$lls)]))]]
 
 
   return(res)
@@ -165,6 +192,8 @@ cellassign <- function(exprs_obj,
 #' @examples
 #' data(example_cellassign_fit)
 #' print(example_cellassign_fit)
+#'
+#' @return Prints a structured representation of the \code{cellassign_fit}
 #'
 #' @export
 print.cellassign_fit <- function(x, ...) {

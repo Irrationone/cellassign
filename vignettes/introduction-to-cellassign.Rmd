@@ -1,10 +1,10 @@
 ---
-title: "Assigning single-cells to known cell types with cellassign"
+title: "Assigning single-cells to known cell types with CellAssign"
 author: "Allen W Zhang and Kieran R Campbell"
 date: "December 2018"
 output: BiocStyle::html_document
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{Introduction to CellAssign}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

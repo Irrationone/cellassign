@@ -60,6 +60,9 @@ marker_list_to_mat <- function(marker_list, include_other = TRUE) {
 
 #' Get MLE estimates of type of each cell
 #'
+#' @return A vector of MLE cell types, where the names are
+#' taken from the column names of the input matrix
+#'
 #' @keywords internal
 get_mle_cell_type <- function(gamma) {
   which_max <- apply(gamma, 1, which.max)
@@ -67,6 +70,8 @@ get_mle_cell_type <- function(gamma) {
 }
 
 #' Extract expression matrix from expression object
+#'
+#' @return The cleaned expression matrix (of counts) from whatever input to \code{cellassign}
 #'
 #' @keywords internal
 extract_expression_matrix <- function(exprs_obj, sce_assay = "counts") {
@@ -86,6 +91,8 @@ extract_expression_matrix <- function(exprs_obj, sce_assay = "counts") {
 #' Create X matrix
 #'
 #' @importFrom stats var
+#'
+#' @return A cleaned covariate matrix given the input provided by the user
 #'
 #' @keywords internal
 initialize_X <- function(X, N, verbose = FALSE) {
