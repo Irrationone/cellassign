@@ -21,7 +21,8 @@ Suggests:
     SingleCellExperiment,
     rmarkdown,
     BiocStyle,
-    dplyr
+    dplyr,
+    pheatmap
 biocViews:
   Software, 
   Transcriptomics, 

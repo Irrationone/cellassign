@@ -178,7 +178,7 @@ cellassign <- function(exprs_obj,
     return(structure(res, class = "cellassign_fit"))
   })
   # Return best result
-  res <- run_results[[which.max(vapply(run_results, function(x) x$lls[length(x$lls)]))]]
+  res <- run_results[[which.max(sapply(run_results, function(x) x$lls[length(x$lls)]))]]
 
 
   return(res)
