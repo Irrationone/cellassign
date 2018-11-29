@@ -41,3 +41,4 @@ inferred from the dimensions of rho (gene by cell-type) and
 s (vector of length number of cells). The specification of X
 is optional - a column of ones will always be added as an intercept.
 }
+\keyword{internal}

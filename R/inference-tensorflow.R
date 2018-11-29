@@ -16,6 +16,8 @@ entry_stop_gradients <- function(target, mask) {
 #'
 #' @import tensorflow
 #' @importFrom glue glue
+#'
+#' @keywords internal
 inference_tensorflow <- function(Y,
                                  rho,
                                  s,
@@ -54,7 +56,7 @@ inference_tensorflow <- function(Y,
                                  em_convergence_thres = 1e-5,
                                  min_delta = log(2)) {
   tf$reset_default_graph()
-  
+
   tfd <- tf$contrib$distributions
 
   # Data placeholders
@@ -63,7 +65,7 @@ inference_tensorflow <- function(Y,
   s_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "s_")
   rho_ <- tf$placeholder(tf$float64, shape = shape(G,C), name = "rho_")
   control_pct_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "control_pct_")
-  
+
   pct_mito_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "pct_mito_")
   mito_rho_ <- tf$placeholder(tf$float64, shape = shape(C), name = "mito_rho_")
 
@@ -71,46 +73,46 @@ inference_tensorflow <- function(Y,
   X0_ <- tf$placeholder(tf$float64, shape = shape(NULL, P0), name = "X0_")
   s0_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "s0_")
   control_pct0_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "control_pct0_")
-  
+
   sample_idx <- tf$placeholder(tf$int32, shape = shape(NULL), name = "sample_idx")
-  
+
   # Added for splines
   B <- as.integer(B)
-  
+
   basis_means_fixed <- seq(from = min(Y), to = max(Y), length.out = B)
   basis_means <- tf$constant(basis_means_fixed, dtype = tf$float64)
-  
+
   b_init <- 2 * (basis_means_fixed[2] - basis_means_fixed[1])^2
-  
+
   LOWER_BOUND <- 1e-10
 
   # Variables
-  
+
   ## Shrinkage prior on delta
   if (use_priors & prior_type == "shrinkage") {
     delta_log_mean <- tf$Variable(0, dtype = tf$float64)
     delta_log_variance <- tf$Variable(1, dtype = tf$float64) # May need to bound this or put a prior over this
   }
-  
+
   ## Regular variables
-  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64, 
+  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
                            constraint = function(x) tf$clip_by_value(x, tf$constant(log(min_delta), dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
 
   beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   beta0 <- tf$Variable(tf$random_normal(shape(G,P0), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
-  
-  
+
+
   mito_delta_log <- tf$Variable(tf$random_uniform(shape(C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
   mito_beta <- tf$Variable(tf$random_normal(shape(P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
-  
+
   total_concentration <- tf$Variable(tf$random_uniform(shape(1), minval = 0.5, maxval = 10, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
                                      constraint = function(x) tf$clip_by_value(x, tf$constant(1e-2, dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
-  
+
   if (use_mito) {
     mito_delta_log <- entry_stop_gradients(mito_delta_log, tf$cast(mito_rho_, tf$bool))
     mito_delta = tf$exp(mito_delta_log)
   }
-  
+
   ## Spline variables
   a <- tf$exp(tf$Variable(tf$zeros(shape = B, dtype = tf$float64)))
   b <- tf$exp(tf$constant(rep(-log(b_init), B), dtype = tf$float64))
@@ -120,21 +122,21 @@ inference_tensorflow <- function(Y,
 
   # Transformed variables
   delta = tf$exp(delta_log)
-  
+
   if (random_effects) {
     # Random effects
     pca <- prcomp(Y, center = TRUE, scale = TRUE)
     pc1 <- pca$x[,1]
     pc1 <- (pc1 - mean(pc1)) / sd(pc1)
-    
+
     psi_ <- tf$Variable(initial_value = pc1, dtype = tf$float64, name = "psi_")
-    
+
     print(summary(pc1))
-    
+
     W <- tf$Variable(tf$zeros(shape = c(1, G), dtype = tf$float64))
-    
+
     psi <- tf$reshape(tf$gather(psi_, sample_idx), shape(-1,1))
-    
+
     psi_times_W <- tf$matmul(psi,W)
   }
 
@@ -144,31 +146,31 @@ inference_tensorflow <- function(Y,
   base_mean_list <- list()
   for(c in seq_len(C)) base_mean_list[[c]] <- base_mean
   mu_ngc = tf$add(tf$stack(base_mean_list, 2), tf$multiply(delta, rho_), name = "adding_base_mean_to_delta_rho")
-  
+
   mu_cng = tf$transpose(mu_ngc, shape(2,0,1))
-  
+
   if (random_effects) {
     mu_cng <- mu_cng + psi_times_W
   }
-  
+
   mu_cngb <- tf$tile(tf$expand_dims(mu_cng, axis = 3L), c(1L, 1L, 1L, B))
-  
+
   phi_cng <- tf$reduce_sum(a * tf$exp(-b * tf$square(mu_cngb - basis_means)), 3L) + LOWER_BOUND
   phi <- tf$transpose(phi_cng, shape(1,2,0))
-  
+
   mu_ngc <- tf$transpose(mu_cng, shape(1,2,0))
-  
+
   mu_ngc <- tf$exp(mu_ngc)
-  
+
   p = mu_ngc / (mu_ngc + phi)
-  
+
   nb_pdf <- tfd$NegativeBinomial(probs = p, total_count = phi)
-  
+
 
   Y_tensor_list <- list()
   for(c in seq_len(C)) Y_tensor_list[[c]] <- Y_
   Y__ = tf$stack(Y_tensor_list, axis = 2)
-  
+
   y_log_prob_raw <- nb_pdf$log_prob(Y__)
   y_log_prob <- tf$transpose(y_log_prob_raw, shape(2,0,1))
 
@@ -179,59 +181,59 @@ inference_tensorflow <- function(Y,
   base_mean0_list <- list()
   for(c in seq_len(C)) base_mean0_list[[c]] <- base_mean0
   mu0_ngc = tf$add(tf$stack(base_mean0_list, 2), tf$multiply(delta, rho_), name = "adding_base_mean_to_delta_rho_supervised")
-  
+
   mu0_ngc <- tf$exp(mu0_ngc)
-  
+
   mu0_ngcb <- tf$tile(tf$expand_dims(mu0_ngc, axis = 3L), c(1L, 1L, 1L, B))
-  
+
   phi0 <- tf$reduce_sum(a * tf$exp(-b * tf$square(mu0_ngcb - basis_means)), 3L) + LOWER_BOUND
-  
+
   p0 = mu0_ngc / (mu0_ngc + phi0)
-  
+
   nb_pdf0 <- tfd$NegativeBinomial(probs = p0, total_count = phi0)
-  
-  
+
+
   Y0_tensor_list <- list()
   for(c in seq_len(C)) Y0_tensor_list[[c]] <- Y0_
   Y0__ = tf$stack(Y0_tensor_list, axis = 2)
-  
+
   y0_log_prob_raw <- nb_pdf0$log_prob(Y0__)
   y0_log_prob <- tf$transpose(y0_log_prob_raw, shape(2,0,1))
 
   gamma_known <- tf$placeholder(dtype = tf$float64, shape = shape(NULL,C))
   ### End supervised part
-  
+
   gamma_fixed = tf$placeholder(dtype = tf$float64, shape = shape(NULL,C))
-  p_y_on_c_unorm <- tf$reduce_sum(y_log_prob, 2L) 
-  
-  Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob) 
+  p_y_on_c_unorm <- tf$reduce_sum(y_log_prob, 2L)
+
+  Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob)
   Q0 = -tf$einsum('nc,cng->', gamma_known, y0_log_prob)
-  
+
   if (use_mito) {
     mito_base_mean <- tf$transpose(tf$einsum('np,p->n', X_, mito_beta))
-    
+
     mito_base_mean_list <- list()
     for(c in seq_len(C)) mito_base_mean_list[[c]] <- mito_base_mean
     mito_mu_nc = tf$sigmoid(tf$add(tf$stack(mito_base_mean_list, 1), tf$multiply(mito_delta, mito_rho_)), name = "mito_mu")
-    
+
     mito_pdf <- tfd$Beta(concentration1 = mito_mu_nc * total_concentration,
                          concentration0 = (tf$constant(1, dtype=tf$float64)-mito_mu_nc) * total_concentration, name = "mito_pdf")
     pct_mito_tensor_list <- list()
     for (c in seq_len(C)) pct_mito_tensor_list[[c]] <- pct_mito_
     pct_mito__ <- tf$stack(pct_mito_tensor_list, axis = 1)
-    
+
     pct_mito_log_prob <- mito_pdf$log_prob(pct_mito__)
-    
+
     p_y_on_c_unorm <- p_y_on_c_unorm + tf$transpose(pct_mito_log_prob)
-    
+
     Q1 = Q1 - tf$einsum('nc,nc->', gamma_fixed, pct_mito_log_prob)
   }
-  
+
   p_y_on_c_norm <- tf$reshape(tf$reduce_logsumexp(p_y_on_c_unorm, 0L), shape(1,-1))
-  
+
   ## TODO: Modify gamma depending on the pct_mito inference
   gamma <- tf$transpose(tf$exp(p_y_on_c_unorm - p_y_on_c_norm))
-  
+
   ## Priors
   if (use_priors) {
     if (prior_type == "regular") {
@@ -242,20 +244,20 @@ inference_tensorflow <- function(Y,
       delta_log_prior <- tfd$Normal(loc = delta_log_mean * rho_,
                                     scale = delta_log_variance)
       delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
-      
+
       if (delta_variance_prior) {
         delta_variance_log_prob <- -tf$log(delta_log_variance)
       }
-      
+
       if (!is.null(delta_log_prior_mean)) {
-        delta_log_mean_prior <- tfd$Normal(loc = tf$constant(delta_log_prior_mean, dtype = tf$float64), 
+        delta_log_mean_prior <- tfd$Normal(loc = tf$constant(delta_log_prior_mean, dtype = tf$float64),
                                            scale = tf$constant(delta_log_prior_scale, dtype = tf$float64))
         delta_log_mean_log_prob <- -tf$reduce_sum(delta_log_mean_prior$log_prob(delta_log_mean))
       }
-      
+
     }
   }
-  
+
   if (random_effects) {
     psi_pdf <- tf$contrib$distributions$Normal(loc = tf$zeros(1, dtype = tf$float64), scale = tf$ones(1, dtype = tf$float64))
     psi_log_prob <- -psi_pdf$log_prob(psi)
@@ -274,14 +276,14 @@ inference_tensorflow <- function(Y,
       if (delta_variance_prior) {
         Q <- Q + delta_variance_log_prob
       }
-      
+
       if (!is.null(delta_log_prior_mean)) {
         Q <- Q + delta_log_mean_log_prob
       }
     }
   }
-  
-  
+
+
   if (random_effects) {
     Q <- Q + tf$reduce_sum(psi_log_prob)
   }
@@ -310,7 +312,7 @@ inference_tensorflow <- function(Y,
       }
     }
   }
-  
+
   if (random_effects) {
     L_y <- L_y - tf$reduce_sum(psi_log_prob)
   }
@@ -322,7 +324,7 @@ inference_tensorflow <- function(Y,
   sess <- tf$Session()
   init <- tf$global_variables_initializer()
   sess$run(init)
-  
+
 
   if (!random_effects) {
     fd_full <- dict(Y_ = Y, X_ = X, s_ = s, rho_ = rho, control_pct_ = control_pct, Y0_ = Y0, X0_ = X0, s0_ = s0, gamma_known = gamma0, control_pct0_ = control_pct0,
@@ -355,10 +357,10 @@ inference_tensorflow <- function(Y,
 
       # M-step
       if (!random_effects) {
-        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, control_pct0_ = control_pct0, 
+        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, control_pct0_ = control_pct0,
                     gamma_known = gamma0, gamma_fixed = g, pct_mito_ = pct_mito[splits[[b]]], mito_rho_ = mito_rho)
       } else {
-        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, control_pct0_ = control_pct0, 
+        gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], control_pct_ = control_pct[splits[[b]]], rho_ = rho, Y0_ = Y0, X0_ = X0, s0_ = s0, control_pct0_ = control_pct0,
                     gamma_known = gamma0, gamma_fixed = g, pct_mito_ = pct_mito[splits[[b]]], mito_rho_ = mito_rho, sample_idx = splits[[b]])
       }
 
@@ -389,7 +391,7 @@ inference_tensorflow <- function(Y,
     print(glue("{mi}\tL old: {ll_old}; L new: {ll}; Difference (%): {ll_diff}"))
     ll_old <- ll
     log_liks <- c(log_liks, ll)
-    
+
     if (ll_diff < em_convergence_thres) {
       break
     }
@@ -398,22 +400,22 @@ inference_tensorflow <- function(Y,
   # Finished EM - peel off final values
   variable_list <- list(delta, beta, phi, gamma, beta0, phi0, mu_ngc, a)
   variable_names <- c("delta", "beta", "phi", "gamma", "beta0", "phi0", "mu", "a")
-  
+
   if (random_effects) {
     variable_list <- c(variable_list, list(psi, W))
     variable_names <- c(variable_names, "psi", "W")
   }
-  
+
   if (use_mito) {
     variable_list <- c(variable_list, list(mito_delta, mito_beta, total_concentration, mito_mu_nc))
     variable_names <- c(variable_names, "mito_delta", "mito_beta", "total_concentration", "mito_mu")
   }
-  
+
   if (use_priors & prior_type == "shrinkage") {
     variable_list <- c(variable_list, list(delta_log_mean, delta_log_variance))
     variable_names <- c(variable_names, "ld_mean", "ld_var")
   }
-  
+
   mle_params <- sess$run(variable_list, feed_dict = fd_full)
   names(mle_params) <- variable_names
   sess$close()
@@ -428,12 +430,12 @@ inference_tensorflow <- function(Y,
   colnames(mle_params$delta) <- colnames(rho)
   rownames(mle_params$beta) <- rownames(rho)
   rownames(mle_params$beta0) <- rownames(rho)
-  
+
   if (use_mito) {
     mle_params$mito_delta <- mle_params$mito_delta * mito_rho
     names(mle_params$mito_delta) <- colnames(rho)
   }
-  
+
   cell_type <- get_mle_cell_type(mle_params$gamma)
 
   rlist <- list(

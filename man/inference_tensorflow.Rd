@@ -18,3 +18,4 @@ inference_tensorflow(Y, rho, s, X, G, C, N, P, control_pct,
 \description{
 cellassign inference in tensorflow, semi-supervised version
 }
+\keyword{internal}

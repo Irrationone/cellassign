@@ -3,7 +3,6 @@
 S3method(print,cellassign_fit)
 export(cellassign)
 export(marker_list_to_mat)
-export(simulate_cellassign)
 import(tensorflow)
 importFrom(SummarizedExperiment,assays)
 importFrom(glue,glue)

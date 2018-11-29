@@ -24,12 +24,12 @@
 #'
 #' @return An N by G matrix of simulated counts
 #'
-#' @export
+#' @keywords internal
 simulate_cellassign <- function(rho,
                                 s,
                                 pi,
                                 delta,
-                                B = 20, 
+                                B = 20,
                                 a,
                                 beta,
                                 X = NULL,
@@ -46,9 +46,9 @@ simulate_cellassign <- function(rho,
   stopifnot(nrow(beta) == G)
   stopifnot(ncol(delta) == C)
   stopifnot(nrow(delta) == G)
-  
+
   X <- initialize_X(X, N)
-  
+
   basis_means <- seq(from = min_Y, to = max_Y, length.out = B)
   b_init <- 2 * (basis_means[2] - basis_means[1])^2
   b <- exp(rep(-log(b_init), B))
@@ -57,9 +57,9 @@ simulate_cellassign <- function(rho,
   stopifnot(ncol(X) == P)
 
   mean_mat <- exp(log(s) + X %*% t(beta) + t((rho * delta)[,pi]))
-  
+
   mean_mat_tiled <- replicate(B, mean_mat)
-  
+
   phi <- apply(a * exp(sweep((sweep(mean_mat_tiled, 3, basis_means))^2, 3, -b, '*')), c(1:2), sum) + LOWER_BOUND
 
   counts <- sapply(seq_len(G), function(g) {

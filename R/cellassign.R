@@ -7,10 +7,23 @@
 #' See details.
 #' @param rho TODO
 #' @param s Numeric vector of cell size factors
+#' @param min_delta The minimum log fold change a marker gene must be over-expressed by in its cell type
 #' @param X Numeric matrix of external covariates. See details.
-#' @param exprs_obj_known SingleCellExperiment object for labeled data (semisupervised)
-#' @param s_known Size factors for labeled cells
-#' @param X_known Auxiliary variables for labeled cells
+#' @param B Number of bases to use for RBF dispersion function
+#' @param shrinkage Logical - should the delta parameters have hierarchical shrinkage?
+#' @param n_batches Number of data subsample batches to use in inference
+#' @param rel_tol_adam The change in Q function value (in pct) below which each optimization round is considered converged
+#' @param rel_tol_em The change in log marginal likelihood value (in pct) below which the EM algorithm is considered converged
+#' @param max_iter_adam Maximum number of ADAM iterations to perform in each M-step
+#' @param max_iter_em Maximum number of EM iterations to perform
+#' @param learning_rate Learning rate of ADAM optimization
+#' @param verbose Logical - should running info be printed?
+#' @param sce_assay The \code{assay} from the input \code{SingleCellExperiment} to use: this assay
+#' should always represent raw counts.
+#' @param num_runs Number of EM runs to perform
+#'
+#'
+#'
 #'
 #' @importFrom methods is
 #' @importFrom SummarizedExperiment assays
@@ -40,24 +53,10 @@
 cellassign <- function(exprs_obj,
                           rho,
                           s = NULL,
+                          min_delta = log(2),
                           X = NULL,
-                          control_pct = NULL,
-                          exprs_obj_known = NULL,
-                          s_known = NULL,
-                          X_known = NULL,
-                          control_pct_known = NULL,
-                          known_types = NULL,
                           B = 10,
-                          pct_mito = NULL,
-                          mito_rho = NULL,
-                          use_priors = FALSE,
-                          use_mito = FALSE,
-                          prior_type = "regular",
-                          delta_log_prior_mean = NULL,
-                          delta_log_prior_scale = 1,
-                          delta_variance_prior = FALSE,
-                          random_effects = FALSE,
-                          data_type = c("RNAseq", "MS"),
+                          shrinkage = FALSE,
                           n_batches = 1,
                           rel_tol_adam = 1e-4,
                           rel_tol_em = 1e-4,
@@ -66,19 +65,11 @@ cellassign <- function(exprs_obj,
                           learning_rate = 0.1,
                           verbose = TRUE,
                           sce_assay = "counts",
-                          gamma_init = NULL,
-                          num_runs = 1,
-                          em_convergence_thres = 1e-5,
-                          min_delta = log(2)) {
+                          num_runs = 1) {
 
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
 
-  if (!is.null(exprs_obj_known)) {
-    Y0 <- extract_expression_matrix(exprs_obj_known, sce_assay = sce_assay)
-  } else {
-    Y0 <- matrix(nrow = 0, ncol = ncol(Y))
-  }
 
   # Check X is correct
   if(!is.null(X)) {
@@ -87,16 +78,8 @@ cellassign <- function(exprs_obj,
     }
   }
 
-  # Check X_known is correct
-  if(!is.null(X_known)) {
-    if(!(is.matrix(X_known) && is.numeric(X_known))) {
-      stop("X_known must either be NULL or a numeric matrix")
-    }
-  }
-
 
   stopifnot(is.matrix(Y))
-  stopifnot(is.matrix(Y0))
   stopifnot(is.matrix(rho))
 
   if(is.null(rownames(rho))) {
@@ -113,22 +96,17 @@ cellassign <- function(exprs_obj,
   }
 
   N <- nrow(Y)
-  N0 <- nrow(Y0)
 
   X <- initialize_X(X, N, verbose = verbose)
-  X0 <- initialize_X(X_known, N0, verbose = verbose)
 
   G <- ncol(Y)
   C <- ncol(rho)
   P <- ncol(X)
 
-  P0 <- ncol(X0)
-
   # Check the dimensions add up
   stopifnot(nrow(X) == N)
   stopifnot(nrow(rho) == G)
 
-  stopifnot(nrow(X0) == N0)
 
   # Compute size factors for each cell
   if (is.null(s)) {
@@ -140,93 +118,53 @@ cellassign <- function(exprs_obj,
     control_pct <- rep(0, N)
   }
 
-  if (is.null(s_known)) {
-    if (N0 > 0) {
-      message("No size factors supplied - computing from matrix. It is highly recommended to supply size factors calculated using the full gene set")
-      s_known <- scran::computeSumFactors(t(Y_known))
-    } else {
-      s_known <- numeric(0)
-    }
-  }
-
-  if (is.null(control_pct_known)) {
-    control_pct_known <- numeric(0)
-  }
-
-  if (any(!known_types %in% colnames(rho))) {
-    stop("Known types must be a proper subset of cluster names.")
-  }
-  gamma0 <- model.matrix(~ 0 + factor(known_types, levels = colnames(rho)))
-
-  stopifnot(nrow(gamma0) == N0)
-
   res <- NULL
-  data_type <- match.arg(data_type)
 
-  if (!is.null(gamma_init)) {
-    gamma_eps <- 1e-3
-    gamma_init[gamma_init < gamma_eps] <- gamma_eps
-    gamma_init <- gamma_init/rowSums(gamma_init)
-  }
 
-  if (!is.null(pct_mito)) {
-    mito_eps <- 1e-5
-    pct_mito <- pct_mito/100
-    pct_mito[pct_mito < mito_eps] <- mito_eps
-    pct_mito[pct_mito > (1-mito_eps)] <- 1-mito_eps
-  } else {
-    pct_mito <- rep(0, N)
-    mito_rho <- rep(0, C)
-  }
+  run_results <- lapply(1:num_runs, function(i) {
+    # TODO: Only run 1 ADAM iteration per EM generation
+    res <- inference_tensorflow(Y = Y,
+                                rho = rho,
+                                s = s,
+                                X = X,
+                                G = G,
+                                C = C,
+                                N = N,
+                                P = P,
+                                control_pct = 1-control_pct,
+                                pct_mito = pct_mito,
+                                mito_rho = mito_rho,
+                                Y0 = Y0,
+                                s0 = s_known,
+                                X0 = X0,
+                                N0 = N0,
+                                P0 = P0,
+                                gamma0 = gamma0,
+                                B = B,
+                                control_pct0 = 1-control_pct_known,
+                                use_priors = shrinkage,
+                                use_mito = use_mito,
+                                prior_type = prior_type,
+                                delta_log_prior_mean = delta_log_prior_mean,
+                                delta_log_prior_scale = delta_log_prior_scale,
+                                delta_variance_prior = delta_variance_prior,
+                                random_effects = random_effects,
+                                verbose = verbose,
+                                n_batches = n_batches,
+                                rel_tol_adam = rel_tol_adam,
+                                rel_tol_em = rel_tol_em,
+                                max_iter_adam = max_iter_adam,
+                                max_iter_em = max_iter_em,
+                                learning_rate = learning_rate,
+                                gamma_init = gamma_init,
+                                em_convergence_thres = rel_tol_em,
+                                min_delta = min_delta)
 
-  if(data_type == "RNAseq") {
-    run_results <- lapply(1:num_runs, function(i) {
-      # TODO: Only run 1 ADAM iteration per EM generation
-      res <- inference_tensorflow(Y = Y,
-                                  rho = rho,
-                                  s = s,
-                                  X = X,
-                                  G = G,
-                                  C = C,
-                                  N = N,
-                                  P = P,
-                                  control_pct = 1-control_pct,
-                                  pct_mito = pct_mito,
-                                  mito_rho = mito_rho,
-                                  Y0 = Y0,
-                                  s0 = s_known,
-                                  X0 = X0,
-                                  N0 = N0,
-                                  P0 = P0,
-                                  gamma0 = gamma0,
-                                  B = B,
-                                  control_pct0 = 1-control_pct_known,
-                                  use_priors = use_priors,
-                                  use_mito = use_mito,
-                                  prior_type = prior_type,
-                                  delta_log_prior_mean = delta_log_prior_mean,
-                                  delta_log_prior_scale = delta_log_prior_scale,
-                                  delta_variance_prior = delta_variance_prior,
-                                  random_effects = random_effects,
-                                  verbose = verbose,
-                                  n_batches = n_batches,
-                                  rel_tol_adam = rel_tol_adam,
-                                  rel_tol_em = rel_tol_em,
-                                  max_iter_adam = max_iter_adam,
-                                  max_iter_em = max_iter_em,
-                                  learning_rate = learning_rate,
-                                  gamma_init = gamma_init,
-                                  em_convergence_thres = em_convergence_thres,
-                                  min_delta = min_delta)
+    return(structure(res, class = "cellassign_fit"))
+  })
+  # Return best result
+  res <- run_results[[which.max(sapply(run_results, function(x) x$lls[length(x$lls)]))]]
 
-      return(structure(res, class = "cellassign_fit"))
-    })
-    # Return best result
-    res <- run_results[[which.max(sapply(run_results, function(x) x$lls[length(x$lls)]))]]
-  } else if (data_type == "MS") {
-    # TODO: Implement GMM for MS data.
-    stop("Model for MS data not implemented at the moment.")
-  }
 
   return(res)
 }

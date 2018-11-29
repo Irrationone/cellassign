@@ -4,18 +4,11 @@
 \alias{cellassign}
 \title{Annotate cells to cell types using cellassign}
 \usage{
-cellassign(exprs_obj, rho, s = NULL, X = NULL, control_pct = NULL,
-  exprs_obj_known = NULL, s_known = NULL, X_known = NULL,
-  control_pct_known = NULL, known_types = NULL, B = 10,
-  pct_mito = NULL, mito_rho = NULL, use_priors = FALSE,
-  use_mito = FALSE, prior_type = "regular",
-  delta_log_prior_mean = NULL, delta_log_prior_scale = 1,
-  delta_variance_prior = FALSE, random_effects = FALSE,
-  data_type = c("RNAseq", "MS"), n_batches = 1, rel_tol_adam = 1e-04,
+cellassign(exprs_obj, rho, s = NULL, min_delta = log(2), X = NULL,
+  B = 10, shrinkage = FALSE, n_batches = 1, rel_tol_adam = 1e-04,
   rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
   learning_rate = 0.1, verbose = TRUE, sce_assay = "counts",
-  gamma_init = NULL, num_runs = 1, em_convergence_thres = 1e-05,
-  min_delta = log(2))
+  num_runs = 1)
 }
 \arguments{
 \item{exprs_obj}{Either a matrix representing gene expression counts or a \code{SummarizedExperiment}.
@@ -25,13 +18,32 @@ See details.}
 
 \item{s}{Numeric vector of cell size factors}
 
+\item{min_delta}{The minimum log fold change a marker gene must be over-expressed by in its cell type}
+
 \item{X}{Numeric matrix of external covariates. See details.}
 
-\item{exprs_obj_known}{SingleCellExperiment object for labeled data (semisupervised)}
+\item{B}{Number of bases to use for RBF dispersion function}
 
-\item{s_known}{Size factors for labeled cells}
+\item{shrinkage}{Logical - should the delta parameters have hierarchical shrinkage?}
 
-\item{X_known}{Auxiliary variables for labeled cells}
+\item{n_batches}{Number of data subsample batches to use in inference}
+
+\item{rel_tol_adam}{The change in Q function value (in pct) below which each optimization round is considered converged}
+
+\item{rel_tol_em}{The change in log marginal likelihood value (in pct) below which the EM algorithm is considered converged}
+
+\item{max_iter_adam}{Maximum number of ADAM iterations to perform in each M-step}
+
+\item{max_iter_em}{Maximum number of EM iterations to perform}
+
+\item{learning_rate}{Learning rate of ADAM optimization}
+
+\item{verbose}{Logical - should running info be printed?}
+
+\item{sce_assay}{The \code{assay} from the input \code{SingleCellExperiment} to use: this assay
+should always represent raw counts.}
+
+\item{num_runs}{Number of EM runs to perform}
 }
 \description{
 Automatically annotate cells to known types based on the expression patterns of
