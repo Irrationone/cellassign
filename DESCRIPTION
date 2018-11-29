@@ -22,7 +22,8 @@ Suggests:
     rmarkdown,
     BiocStyle,
     dplyr,
-    pheatmap
+    pheatmap,
+    testthat
 biocViews:
   Software, 
   Transcriptomics, 
