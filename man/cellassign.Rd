@@ -108,7 +108,7 @@ data(example_sce)
 data(example_rho)
 
 fit <- em_result <- cellassign(example_sce,
-rho = example_rho,
+marker_gene_info = example_rho,
 s = colSums(SummarizedExperiment::assay(example_sce, "counts")),
 learning_rate = 1e-2,
 shrinkage = TRUE,
