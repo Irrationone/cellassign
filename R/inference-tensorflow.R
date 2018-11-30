@@ -77,8 +77,8 @@ inference_tensorflow <- function(Y,
 
   beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
 
-  total_concentration <- tf$Variable(tf$random_uniform(shape(1), minval = 0.5, maxval = 10, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
-                                     constraint = function(x) tf$clip_by_value(x, tf$constant(1e-2, dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
+  # total_concentration <- tf$Variable(tf$random_uniform(shape(1), minval = 0.5, maxval = 10, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
+  #                                    constraint = function(x) tf$clip_by_value(x, tf$constant(1e-2, dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
 
 
   ## Spline variables

@@ -113,6 +113,19 @@ cellassign <- function(exprs_obj,
                         sce_assay = "counts",
                         num_runs = 1) {
 
+  # Work out rho
+  rho <- NULL
+  if(is.matrix(marker_gene_info)) {
+    rho <- marker_gene_info
+  } else if(is.list(marker_gene_info)) {
+    rho <- marker_list_to_mat(marker_gene_info, include_other = FALSE)
+  } else {
+    stop("marker_gene_info must either be a matrix or list. See ?cellassign")
+  }
+
+  # Subset genes appropriately
+  # exprs_obj <- subset_exprs_obj(exprs_obj, rho)
+
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
 
@@ -124,15 +137,7 @@ cellassign <- function(exprs_obj,
     }
   }
 
-  # Work out rho
-  rho <- NULL
-  if(is.matrix(marker_gene_info)) {
-    rho <- marker_gene_info
-  } else if(is.list(marker_gene_info)) {
-    rho <- marker_list_to_mat(marker_gene_info, include_other = FALSE)
-  } else {
-    stop("marker_gene_info must either be a matrix or list. See ?cellassign")
-  }
+
 
 
   stopifnot(is.matrix(Y))
