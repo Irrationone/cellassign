@@ -38,10 +38,10 @@ devtools::install_github("Irrationone/cellassign")
 The model can be run as follows:
 
 ``` r
-cas <- cellassign_em(exprs_obj = gene_expression_data,
-                    marker_gene_info = marker_gene_info,
-                    s = s,
-                    X = X)
+cas <- cellassign(exprs_obj = gene_expression_data,
+                  marker_gene_info = marker_gene_info,
+                  s = s,
+                  X = X)
 ```
 
 # Paper
