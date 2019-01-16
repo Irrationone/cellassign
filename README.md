@@ -46,7 +46,7 @@ cas <- cellassign(exprs_obj = gene_expression_data,
 
 # Paper
 
-TBA ...
+https://www.biorxiv.org/content/early/2019/01/16/521914
 
 # Authors
 
