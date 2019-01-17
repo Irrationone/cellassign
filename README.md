@@ -44,9 +44,18 @@ cas <- cellassign(exprs_obj = gene_expression_data,
                   X = X)
 ```
 
+An example set of markers for the human tumour microenvironment can be loaded by calling
+
+``` r
+data(example_TME_markers)
+
+```
+
+Please see the package vignette for details and caveats.
+
 # Paper
 
-https://www.biorxiv.org/content/early/2019/01/16/521914
+[Probabilistic cell type assignment of single-cell transcriptomic data reveals spatiotemporal microenvironment dynamics in human cancers, _Biorxiv 2019_](https://www.biorxiv.org/content/early/2019/01/16/521914)
 
 # Authors
 

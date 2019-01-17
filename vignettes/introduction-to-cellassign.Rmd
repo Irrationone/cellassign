@@ -138,6 +138,64 @@ Finally, since this is simulated data we can check the concordance with the true
 print(table(example_sce$Group, fit$cell_type))
 ```
 
+# Example set of markers for tumour microenvironment
+
+A set of example markers are included with the `cellassign` package for common cell types in the human tumour microenvironment. Users should be aware that
+
+1. This set is provided as an _example_ only and we recommend researchers derive marker gene sets for their own use
+2. The `cellassign` workflow is typically iterative, including ensuring all markers are expressed in your expression data, and removing cell types from the input marker matrix that do not appear to be present
+
+The marker genes are available for the following cell types:
+
+* B cells
+* T cells
+* Cytotoxic T cells
+* Monocyte/Macrophage
+* Epithelial cells
+* Myofibroblasts
+* Vascular smooth muscle cells
+* Endothelial cells
+
+These can be accessed by calling
+
+```{r}
+data(example_TME_markers)
+```
+
+Note that this is a list of two marker lists:
+
+```{r}
+names(example_TME_markers)
+```
+
+Where `symbol` contains gene symbols:
+
+```{r}
+lapply(head(example_TME_markers$symbol, n = 4), head, n = 4)
+```
+
+and `ensembl` contains the equivalent ensembl gene ids:
+
+```{r}
+lapply(head(example_TME_markers$ensembl, n = 4), head, n = 4)
+```
+
+To use these with `cellassign` we can turn them into the binary marker by cell type matrix:
+
+```{r}
+marker_mat <- marker_list_to_mat(example_TME_markers$ensembl)
+
+marker_mat[1:3, 1:3]
+```
+
+*Important*: the single cell experiment or input gene expression matrix should be subset accordingly to match the rows of the marker input matrix, e.g. if `sce` is a `SingleCellExperiment` with ensembl IDs as rownames then call
+
+```{r, eval = FALSE}
+sce_marker <- sce[rownames(marker_mat),]
+```
+
+You can the proceed using `cellassign` as before.
+
 
 # Advanced usage
 

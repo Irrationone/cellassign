@@ -262,3 +262,12 @@ print.cellassign_fit <- function(x, ...) {
 #' @examples
 #' data(example_cellassign_fit)
 "example_cellassign_fit"
+
+#' Example tumour microevironment markers
+#'
+#' A set of example marker genes for commonly profiling the
+#' human tumour mircoenvironment
+#'
+#' @examples
+#' data(example_TME_markers)
+"example_TME_markers"
