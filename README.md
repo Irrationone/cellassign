@@ -1,6 +1,7 @@
 # cellassign
 
-[![Build Status](https://travis-ci.com/Irrationone/cellassign.svg?token=HqeTkKNZ9uXDwGpFxagC&branch=master)](https://travis-ci.com/Irrationone/cellassign)
+[![Build Status](https://travis-ci.com/Irrationone/cellassign.svg?token=HqeTkKNZ9uXDwGpFxagC&branch=master)](https://travis-ci.com/Irrationone/cellassign) [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg)](http://bioconda.github.io/recipes/r-cellassign/README.html)
+
 
 `cellassign` automatically assigns single-cell RNA-seq data to known cell types across thousands of cells accounting for patient and batch specific effects. Information about *a priori* known markers cell types is provided as input to the model in the form of a (binary) marker gene by cell-type matrix. `cellassign` then probabilistically assigns each cell to a cell type, removing subjective biases from typical unsupervised clustering workflows.
 
@@ -11,6 +12,16 @@
 # Getting started
 
 ## Installation
+
+### Installing from conda
+
+With [conda](https://conda.io/miniconda.html), install the current release version of `cellassign` as follows:
+
+``` r
+conda install -c bioconda r-cellassign
+```
+
+### Installing from GitHub
 
 `cellassign` is built using Google's Tensorflow, and as such requires installation of the R package `tensorflow`:
 
