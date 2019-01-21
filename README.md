@@ -18,7 +18,7 @@
 With [conda](https://conda.io/miniconda.html), install the current release version of `cellassign` as follows:
 
 ``` r
-conda install -c bioconda r-cellassign
+conda install -c conda-forge -c bioconda r-cellassign
 ```
 
 ### Installing from GitHub
