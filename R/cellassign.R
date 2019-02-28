@@ -128,17 +128,15 @@ cellassign <- function(exprs_obj,
 
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
-
-
+  
+  
   # Check X is correct
   if(!is.null(X)) {
     if(!(is.matrix(X) && is.numeric(X))) {
       stop("X must either be NULL or a numeric matrix")
     }
   }
-
-
-
+  
 
   stopifnot(is.matrix(Y))
   stopifnot(is.matrix(rho))
@@ -155,6 +153,11 @@ cellassign <- function(exprs_obj,
       known_types <- paste0("gene_", known_types)
     }
   }
+  
+  # Remove non-expressed genes
+  val_result <- validate_genes(Y, rho)
+  Y <- val_result$Y
+  rho <- val_result$rho
 
   N <- nrow(Y)
 
@@ -173,6 +176,11 @@ cellassign <- function(exprs_obj,
   if (is.null(s)) {
     message("No size factors supplied - computing from matrix. It is highly recommended to supply size factors calculated using the full gene set")
     s <- scran::computeSumFactors(t(Y))
+  }
+  
+  # Make sure all size factors are positive
+  if (any(s <= 0)) {
+    stop("Cells with size factors <= 0 must be removed prior to analysis.")
   }
 
 
