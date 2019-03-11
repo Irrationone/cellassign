@@ -152,9 +152,7 @@ inference_tensorflow <- function(Y,
   train = optimizer$minimize(Q)
 
   # Marginal log likelihood for monitoring convergence
-  eta_y = tf$reduce_sum(y_log_prob, 2L)
-
-  L_y = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
+  L_y = tf$reduce_sum(tf$reduce_logsumexp(p_y_on_c_unorm, 0L))
 
   L_y <- L_y - theta_log_prob
   if (shrinkage) {
@@ -197,7 +195,7 @@ inference_tensorflow <- function(Y,
 
         if(mi %% 20 == 0) {
           if (verbose) {
-            message(paste(mi, sess$run(Q1, feed_dict = gfd)))
+            message(paste(mi, sess$run(Q, feed_dict = gfd)))
           }
           Q_new <- sess$run(Q, feed_dict = gfd)
           Q_diff = -(Q_new - Q_old) / abs(Q_old)
