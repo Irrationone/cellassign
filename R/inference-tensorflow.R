@@ -66,7 +66,7 @@ inference_tensorflow <- function(Y,
   # Variables
 
   ## Shrinkage prior on delta
-  if (use_priors) {
+  if (shrinkage) {
     delta_log_mean <- tf$Variable(0, dtype = tf$float64)
     delta_log_variance <- tf$Variable(1, dtype = tf$float64) # May need to bound this or put a prior over this
   }
@@ -222,7 +222,7 @@ inference_tensorflow <- function(Y,
   variable_names <- c("delta", "beta", "phi", "gamma", "mu", "a", "theta")
 
 
-  if (use_priors) {
+  if (shrinkage) {
     variable_list <- c(variable_list, list(delta_log_mean, delta_log_variance))
     variable_names <- c(variable_names, "ld_mean", "ld_var")
   }
