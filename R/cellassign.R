@@ -111,7 +111,8 @@ cellassign <- function(exprs_obj,
                         learning_rate = 0.1,
                         verbose = TRUE,
                         sce_assay = "counts",
-                        num_runs = 1) {
+                        num_runs = 1,
+                       model_type = "unsupervised") {
 
   # Work out rho
   rho <- NULL
@@ -128,15 +129,15 @@ cellassign <- function(exprs_obj,
 
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
-  
-  
+
+
   # Check X is correct
   if(!is.null(X)) {
     if(!(is.matrix(X) && is.numeric(X))) {
       stop("X must either be NULL or a numeric matrix")
     }
   }
-  
+
 
   stopifnot(is.matrix(Y))
   stopifnot(is.matrix(rho))
@@ -153,11 +154,6 @@ cellassign <- function(exprs_obj,
       known_types <- paste0("gene_", known_types)
     }
   }
-  
-  # Remove non-expressed genes
-  val_result <- validate_genes(Y, rho)
-  Y <- val_result$Y
-  rho <- val_result$rho
 
   N <- nrow(Y)
 
@@ -177,7 +173,7 @@ cellassign <- function(exprs_obj,
     message("No size factors supplied - computing from matrix. It is highly recommended to supply size factors calculated using the full gene set")
     s <- scran::computeSumFactors(t(Y))
   }
-  
+
   # Make sure all size factors are positive
   if (any(s <= 0)) {
     stop("Cells with size factors <= 0 must be removed prior to analysis.")
@@ -188,25 +184,35 @@ cellassign <- function(exprs_obj,
 
 
   run_results <- lapply(seq_len(num_runs), function(i) {
-    res <- inference_tensorflow(Y = Y,
-                                rho = rho,
-                                s = s,
-                                X = X,
-                                G = G,
-                                C = C,
-                                N = N,
-                                P = P,
-                                B = B,
-                                use_priors = shrinkage,
-                                verbose = verbose,
-                                n_batches = n_batches,
-                                rel_tol_adam = rel_tol_adam,
-                                rel_tol_em = rel_tol_em,
-                                max_iter_adam = max_iter_adam,
-                                max_iter_em = max_iter_em,
-                                learning_rate = learning_rate,
-                                em_convergence_thres = rel_tol_em,
-                                min_delta = min_delta)
+    model <- newCellAssignModel()
+
+    model <- initialize_model(model = model,
+                     N = N,
+                     G = G,
+                     C = C,
+                     P = P,
+                     B = B,
+                     Y = Y,
+                     shrinkage = shrinkage,
+                     min_delta = min_delta,
+                     random_seed = random_seed,
+                     model_type = model_type,
+                     float_type = tf$float64)
+
+    model <- compute_em_objective(model = model,
+                                  learning_rate = learning_rate)
+
+    res <- fit_model(model,
+                       Y = Y,
+                       X = X,
+                       s = s,
+                       rho = rho,
+                       max_iter_em = max_iter_em,
+                       rel_tol_em = rel_tol_em,
+                       max_iter_adam = max_iter_adam,
+                       rel_tol_adam = rel_tol_adam,
+                       n_batches = n_batches,
+                       verbose = verbose)
 
     return(structure(res, class = "cellassign_fit"))
   })
