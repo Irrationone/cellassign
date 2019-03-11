@@ -4,7 +4,7 @@
 \alias{cellassign}
 \title{Annotate cells to cell types using cellassign}
 \usage{
-cellassign(exprs_obj, marker_gene_info, s = NULL, min_delta = log(2),
+cellassign(exprs_obj, marker_gene_info, s = NULL, min_delta = 2,
   X = NULL, B = 10, shrinkage = FALSE, n_batches = 1,
   dirichlet_concentration = 0.01, rel_tol_adam = 1e-04,
   rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,

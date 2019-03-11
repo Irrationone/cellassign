@@ -100,7 +100,7 @@
 cellassign <- function(exprs_obj,
                        marker_gene_info,
                        s = NULL,
-                       min_delta = log(2),
+                       min_delta = 2,
                        X = NULL,
                        B = 10,
                        shrinkage = FALSE,
