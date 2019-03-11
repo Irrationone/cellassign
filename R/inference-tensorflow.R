@@ -30,7 +30,7 @@ inference_tensorflow <- function(Y,
                                  N,
                                  P,
                                  B = 10,
-                                 use_priors,
+                                 shrinkage,
                                  verbose = FALSE,
                                  n_batches = 1,
                                  rel_tol_adam = 1e-4,
@@ -39,8 +39,8 @@ inference_tensorflow <- function(Y,
                                  max_iter_em = 20,
                                  learning_rate = 1e-4,
                                  random_seed = NULL,
-                                 em_convergence_thres = 1e-5,
-                                 min_delta = log(2)) {
+                                 min_delta = 2,
+                                 dirichlet_concentration = rep(1e-2, C)) {
   tf$reset_default_graph()
 
   tfd <- tf$contrib$distributions
@@ -77,9 +77,7 @@ inference_tensorflow <- function(Y,
 
   beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
 
-  # total_concentration <- tf$Variable(tf$random_uniform(shape(1), minval = 0.5, maxval = 10, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
-  #                                    constraint = function(x) tf$clip_by_value(x, tf$constant(1e-2, dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
-
+  theta_logit <- tf$Variable(tf$random_normal(shape(C), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
 
   ## Spline variables
   a <- tf$exp(tf$Variable(tf$zeros(shape = B, dtype = tf$float64)))
@@ -90,6 +88,7 @@ inference_tensorflow <- function(Y,
 
   # Transformed variables
   delta = tf$exp(delta_log)
+  theta_log = tf$nn$log_softmax(theta_logit)
 
   # Model likelihood
   base_mean <- tf$transpose(tf$einsum('np,gp->gn', X_, beta) + tf$log(s_)) #+ tf$add(tf$log(s_), tf$log(control_pct_), name = "s_to_control"))
@@ -99,10 +98,6 @@ inference_tensorflow <- function(Y,
   mu_ngc = tf$add(tf$stack(base_mean_list, 2), tf$multiply(delta, rho_), name = "adding_base_mean_to_delta_rho")
 
   mu_cng = tf$transpose(mu_ngc, shape(2,0,1))
-
-  # if (random_effects) {
-  #   mu_cng <- mu_cng + psi_times_W
-  # }
 
   mu_cngb <- tf$tile(tf$expand_dims(mu_cng, axis = 3L), c(1L, 1L, 1L, B))
 
@@ -123,31 +118,32 @@ inference_tensorflow <- function(Y,
   Y__ = tf$stack(Y_tensor_list, axis = 2)
 
   y_log_prob_raw <- nb_pdf$log_prob(Y__)
-  y_log_prob <- tf$transpose(y_log_prob_raw, shape(2,0,1))
-
+  y_log_prob <- tf$transpose(y_log_prob_raw, shape(0,2,1))
+  y_log_prob_sum <- tf$reduce_sum(y_log_prob, 2L) + theta_log
+  p_y_on_c_unorm <- tf$transpose(y_log_prob_sum, shape(1,0))
 
   gamma_fixed = tf$placeholder(dtype = tf$float64, shape = shape(NULL,C))
-  p_y_on_c_unorm <- tf$reduce_sum(y_log_prob, 2L)
 
-  Q1 = -tf$einsum('nc,cng->', gamma_fixed, y_log_prob)
-
+  Q = -tf$einsum('nc,cn->', gamma_fixed, p_y_on_c_unorm)
 
   p_y_on_c_norm <- tf$reshape(tf$reduce_logsumexp(p_y_on_c_unorm, 0L), shape(1,-1))
 
   gamma <- tf$transpose(tf$exp(p_y_on_c_unorm - p_y_on_c_norm))
 
   ## Priors
-  if (use_priors) {
+  if (shrinkage) {
     delta_log_prior <- tfd$Normal(loc = delta_log_mean * rho_,
                                   scale = delta_log_variance)
     delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
-
   }
+
+  theta_log_prior <- tfd$Dirichlet(concentration = tf$constant(dirichlet_concentration, dtype = tf$float64))
+  theta_log_prob <- -theta_log_prior$log_prob(tf$exp(theta_log))
 
   ## End priors
 
-  Q = Q1
-  if (use_priors) {
+  Q <- Q + theta_log_prob
+  if (shrinkage) {
     Q <- Q + delta_log_prob
   }
 
@@ -158,10 +154,10 @@ inference_tensorflow <- function(Y,
   # Marginal log likelihood for monitoring convergence
   eta_y = tf$reduce_sum(y_log_prob, 2L)
 
-  L_y1 = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
+  L_y = tf$reduce_sum(tf$reduce_logsumexp(eta_y, 0L))
 
-  L_y <- L_y1
-  if (use_priors) {
+  L_y <- L_y - theta_log_prob
+  if (shrinkage) {
     L_y <- L_y - delta_log_prob
   }
 
@@ -218,14 +214,14 @@ inference_tensorflow <- function(Y,
     ll_old <- ll
     log_liks <- c(log_liks, ll)
 
-    if (ll_diff < em_convergence_thres) {
+    if (ll_diff < rel_tol_em) {
       break
     }
   }
 
   # Finished EM - peel off final values
-  variable_list <- list(delta, beta, phi, gamma, mu_ngc, a)
-  variable_names <- c("delta", "beta", "phi", "gamma", "mu", "a")
+  variable_list <- list(delta, beta, phi, gamma, mu_ngc, a, tf$exp(theta_log))
+  variable_names <- c("delta", "beta", "phi", "gamma", "mu", "a", "theta")
 
 
   if (use_priors) {
@@ -246,6 +242,7 @@ inference_tensorflow <- function(Y,
   rownames(mle_params$delta) <- rownames(rho)
   colnames(mle_params$delta) <- colnames(rho)
   rownames(mle_params$beta) <- rownames(rho)
+  names(mle_params$theta) <- colnames(rho)
 
 
   cell_type <- get_mle_cell_type(mle_params$gamma)
