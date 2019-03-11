@@ -149,11 +149,8 @@ cellassign <- function(exprs_obj,
     warning("No cell type names supplied - replacing with generics")
     colnames(rho) <- paste0("cell_type_", seq_len(ncol(rho)))
 
-    if (!is.null(known_types)) {
-      known_types <- paste0("gene_", known_types)
-    }
   }
-  
+ 
   # Remove non-expressed genes
   val_result <- validate_genes(Y, rho)
   Y <- val_result$Y
