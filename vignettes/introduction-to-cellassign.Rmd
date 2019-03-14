@@ -100,11 +100,11 @@ We then call `cellassign` using the `cellassign()` function, passing in the abov
 s <- sizeFactors(example_sce)
 
 fit <- cellassign(exprs_obj = example_sce, 
-                        marker_gene_info = example_rho, 
-                        s = s, 
-                        learning_rate = 1e-2, 
-                        shrinkage = TRUE,
-                        verbose = FALSE)
+                  marker_gene_info = example_rho, 
+                  s = s, 
+                  learning_rate = 1e-2, 
+                  shrinkage = TRUE,
+                  verbose = FALSE)
 ```
 
 This returns a `cellassign_fit` object:

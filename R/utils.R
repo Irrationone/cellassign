@@ -121,24 +121,6 @@ initialize_X <- function(X, N, verbose = FALSE) {
   return(X)
 }
 
-#' Extract expression matrix from expression object
-#'
-#' @return The expression matrix and marker gene matrix, with only expressed genes, for input to \code{cellassign}
-#'
-#' @keywords internal
-validate_genes <- function(Y, rho) {
-  expressed_genes <- colSums(Y) > 0
-  if (sum(expressed_genes) < ncol(Y)) {
-    message(paste("Removing genes", paste(colnames(Y)[!expressed_genes], collapse = ", "),
-                  "with <= 0 total counts."))
-    
-    Y <- Y[,expressed_genes]
-    rho <- rho[expressed_genes,]
-  }
-  
-  return(list(Y=Y, rho=rho))
-}
-
 #' Makes sure the exprs obj is of correct size
 # subset_exprs_obj <- function(exprs_obj, rho) {
 #   G_e <- NULL

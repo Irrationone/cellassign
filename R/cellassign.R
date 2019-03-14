@@ -17,6 +17,7 @@
 #' @param shrinkage Logical - should the delta parameters
 #' have hierarchical shrinkage?
 #' @param n_batches Number of data subsample batches to use in inference
+#' @param dirichlet_concentration Dirichlet concentration parameter for cell type abundances
 #' @param rel_tol_adam The change in Q function value (in pct) below which
 #' each optimization round is considered converged
 #' @param rel_tol_em The change in log marginal likelihood value (in pct)
@@ -97,21 +98,22 @@
 #' @return
 #' An object of class \code{cellassign_fit}. See \code{details}
 cellassign <- function(exprs_obj,
-                        marker_gene_info,
-                        s = NULL,
-                        min_delta = log(2),
-                        X = NULL,
-                        B = 10,
-                        shrinkage = FALSE,
-                        n_batches = 1,
-                        rel_tol_adam = 1e-4,
-                        rel_tol_em = 1e-4,
-                        max_iter_adam = 1e5,
-                        max_iter_em = 20,
-                        learning_rate = 0.1,
-                        verbose = TRUE,
-                        sce_assay = "counts",
-                        num_runs = 1) {
+                       marker_gene_info,
+                       s = NULL,
+                       min_delta = 2,
+                       X = NULL,
+                       B = 10,
+                       shrinkage = FALSE,
+                       n_batches = 1,
+                       dirichlet_concentration = 1e-2,
+                       rel_tol_adam = 1e-4,
+                       rel_tol_em = 1e-4,
+                       max_iter_adam = 1e5,
+                       max_iter_em = 20,
+                       learning_rate = 0.1,
+                       verbose = TRUE,
+                       sce_assay = "counts",
+                       num_runs = 1) {
 
   # Work out rho
   rho <- NULL
@@ -123,20 +125,17 @@ cellassign <- function(exprs_obj,
     stop("marker_gene_info must either be a matrix or list. See ?cellassign")
   }
 
-  # Subset genes appropriately
-  # exprs_obj <- subset_exprs_obj(exprs_obj, rho)
-
   # Get expression input
   Y <- extract_expression_matrix(exprs_obj, sce_assay = sce_assay)
-  
-  
+
+
   # Check X is correct
   if(!is.null(X)) {
     if(!(is.matrix(X) && is.numeric(X))) {
       stop("X must either be NULL or a numeric matrix")
     }
   }
-  
+
 
   stopifnot(is.matrix(Y))
   stopifnot(is.matrix(rho))
@@ -150,11 +149,6 @@ cellassign <- function(exprs_obj,
     colnames(rho) <- paste0("cell_type_", seq_len(ncol(rho)))
 
   }
- 
-  # Remove non-expressed genes
-  val_result <- validate_genes(Y, rho)
-  Y <- val_result$Y
-  rho <- val_result$rho
 
   N <- nrow(Y)
 
@@ -174,12 +168,16 @@ cellassign <- function(exprs_obj,
     message("No size factors supplied - computing from matrix. It is highly recommended to supply size factors calculated using the full gene set")
     s <- scran::computeSumFactors(t(Y))
   }
-  
+
   # Make sure all size factors are positive
   if (any(s <= 0)) {
     stop("Cells with size factors <= 0 must be removed prior to analysis.")
   }
 
+  # Make Dirichlet concentration parameter symmetric if not otherwise specified
+  if (length(dirichlet_concentration) == 1) {
+    dirichlet_concentration <- rep(dirichlet_concentration, C)
+  }
 
   res <- NULL
 
@@ -194,7 +192,7 @@ cellassign <- function(exprs_obj,
                                 N = N,
                                 P = P,
                                 B = B,
-                                use_priors = shrinkage,
+                                shrinkage = shrinkage,
                                 verbose = verbose,
                                 n_batches = n_batches,
                                 rel_tol_adam = rel_tol_adam,
@@ -202,8 +200,8 @@ cellassign <- function(exprs_obj,
                                 max_iter_adam = max_iter_adam,
                                 max_iter_em = max_iter_em,
                                 learning_rate = learning_rate,
-                                em_convergence_thres = rel_tol_em,
-                                min_delta = min_delta)
+                                min_delta = min_delta,
+                                dirichlet_concentration = dirichlet_concentration)
 
     return(structure(res, class = "cellassign_fit"))
   })

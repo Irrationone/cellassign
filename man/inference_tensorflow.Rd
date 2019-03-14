@@ -4,11 +4,11 @@
 \alias{inference_tensorflow}
 \title{cellassign inference in tensorflow, semi-supervised version}
 \usage{
-inference_tensorflow(Y, rho, s, X, G, C, N, P, B = 10, use_priors,
+inference_tensorflow(Y, rho, s, X, G, C, N, P, B = 10, shrinkage,
   verbose = FALSE, n_batches = 1, rel_tol_adam = 1e-04,
   rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
-  learning_rate = 1e-04, random_seed = NULL,
-  em_convergence_thres = 1e-05, min_delta = log(2))
+  learning_rate = 1e-04, random_seed = NULL, min_delta = 2,
+  dirichlet_concentration = rep(0.01, C))
 }
 \value{
 A list of MLE cell type calls, MLE parameter estimates,
