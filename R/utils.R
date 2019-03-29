@@ -121,6 +121,29 @@ initialize_X <- function(X, N, verbose = FALSE) {
   return(X)
 }
 
+#' Offset rho matrix with some uncertainty
+#' 
+#' @return A rho matrix offset inwards by some value
+#' 
+#' @keywords internal
+offset_rho <- function(x, offset = 0.05) {
+  stopifnot(offset < 1)
+  
+  zero_entries <- x == 0
+  one_entries <- x == 1
+  
+  x[zero_entries] <- offset
+  x[one_entries] <- 1 - offset
+  return(x)
+}
+
+#' Logit transform
+#' 
+#' @keywords internal
+logit <- function(x) {
+  log(x/(1-x))
+}
+
 #' Makes sure the exprs obj is of correct size
 # subset_exprs_obj <- function(exprs_obj, rho) {
 #   G_e <- NULL

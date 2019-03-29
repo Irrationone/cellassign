@@ -2,6 +2,7 @@
 
 S3method(print,cellassign_fit)
 export(cellassign)
+export(cellassign_vb)
 export(marker_list_to_mat)
 import(tensorflow)
 importFrom(SummarizedExperiment,assays)
