@@ -40,6 +40,7 @@ inference_tensorflow <- function(Y,
                                  learning_rate = 1e-4,
                                  random_seed = NULL,
                                  min_delta = 2,
+                                 rel_tol_qdiff = 1e-4,
                                  dirichlet_concentration = rep(1e-2, C)) {
   tf$reset_default_graph()
 
@@ -186,9 +187,11 @@ inference_tensorflow <- function(Y,
 
       Q_old <- sess$run(Q, feed_dict = gfd)
       Q_diff <- rel_tol_adam + 1
+      Q_diff_min <- Q_diff
+      Q_diff_delta <- -Q_diff
       mi = 0
 
-      while(mi < max_iter_adam && Q_diff > rel_tol_adam) {
+      while(mi < max_iter_adam && Q_diff > rel_tol_adam && Q_diff_delta < rel_tol_qdiff) {
         mi <- mi + 1
 
         sess$run(train, feed_dict = gfd)
@@ -199,6 +202,8 @@ inference_tensorflow <- function(Y,
           }
           Q_new <- sess$run(Q, feed_dict = gfd)
           Q_diff = -(Q_new - Q_old) / abs(Q_old)
+          Q_diff_min <- min(Q_diff_min, Q_diff)
+          Q_diff_delta <- Q_diff - Q_diff_min
           Q_old <- Q_new
         }
       } # End gradient descent
@@ -254,4 +259,3 @@ inference_tensorflow <- function(Y,
   return(rlist)
 
 }
-

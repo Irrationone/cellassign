@@ -108,6 +108,7 @@ cellassign <- function(exprs_obj,
                        dirichlet_concentration = 1e-2,
                        rel_tol_adam = 1e-4,
                        rel_tol_em = 1e-4,
+                       rel_tol_qdiff = 1e-4,
                        max_iter_adam = 1e5,
                        max_iter_em = 20,
                        learning_rate = 0.1,
@@ -201,6 +202,7 @@ cellassign <- function(exprs_obj,
                                 max_iter_em = max_iter_em,
                                 learning_rate = learning_rate,
                                 min_delta = min_delta,
+                                rel_tol_qdiff = rel_tol_qdiff,
                                 dirichlet_concentration = dirichlet_concentration)
 
     return(structure(res, class = "cellassign_fit"))
