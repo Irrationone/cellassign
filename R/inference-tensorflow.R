@@ -136,12 +136,13 @@ inference_tensorflow <- function(Y,
                                   scale = delta_log_variance)
     delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
   }
+  
+  THETA_LOWER_BOUND <- 1e-20
 
   theta_log_prior <- tfd$Dirichlet(concentration = tf$constant(dirichlet_concentration, dtype = tf$float64))
-  theta_log_prob <- -theta_log_prior$log_prob(tf$exp(theta_log))
+  theta_log_prob <- -theta_log_prior$log_prob(tf$exp(theta_log) + THETA_LOWER_BOUND)
 
   ## End priors
-
   Q <- Q + theta_log_prob
   if (shrinkage) {
     Q <- Q + delta_log_prob
