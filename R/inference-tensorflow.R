@@ -143,7 +143,6 @@ inference_tensorflow <- function(Y,
   theta_log_prob <- -theta_log_prior$log_prob(tf$exp(theta_log) + THETA_LOWER_BOUND)
 
   ## End priors
-  Q_raw <- Q
   Q <- Q + theta_log_prob
   if (shrinkage) {
     Q <- Q + delta_log_prob
