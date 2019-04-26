@@ -79,7 +79,7 @@ extract_expression_matrix <- function(exprs_obj, sce_assay = "counts") {
     if(!sce_assay %in% names(SummarizedExperiment::assays(exprs_obj))) {
       stop(paste("Assay", sce_assay, "is not present in the assays associated with the input SingleCellExperiment"))
     }
-    Y <- t(SummarizedExperiment::assay(exprs_obj, sce_assay))
+    Y <- t(as.matrix(SummarizedExperiment::assay(exprs_obj, sce_assay)))
   } else if(is.matrix(exprs_obj) && is.numeric(exprs_obj)) {
     Y <- exprs_obj
   } else {

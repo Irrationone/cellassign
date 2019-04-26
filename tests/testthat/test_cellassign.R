@@ -32,6 +32,29 @@ test_that("cellassign(...) returns a valid object", {
 
 })
 
+test_that("cellassign(...) returns a valid SingleCellExperiment", {
+  library(SummarizedExperiment)
+  data(example_sce)
+  data(example_rho)
+  N <- ncol(example_sce)
+  G <- nrow(example_sce)
+  C <- ncol(example_rho)
+
+  sce <- cellassign(example_sce,
+                    example_rho,
+                    s = sizeFactors(example_sce),
+                    max_iter_adam = 2,
+                    max_iter_em = 2,
+                    return_SCE = TRUE)
+
+  expect_is(sce, "SingleCellExperiment")
+
+  expect_true("cellassign_celltype" %in% names(colData(sce)))
+  expect_true("cellassign_fit" %in% names(sce@metadata))
+
+})
+
+
 test_that("marker_gene_list() works as required", {
 
   data(example_sce)

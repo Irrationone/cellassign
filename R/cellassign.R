@@ -27,6 +27,8 @@
 #' @param max_iter_em Maximum number of EM iterations to perform
 #' @param learning_rate Learning rate of ADAM optimization
 #' @param verbose Logical - should running info be printed?
+#' @param return_SCE Logical - should a SingleCellExperiment be returned with the cell
+#' type annotations added? See details.
 #' @param sce_assay The \code{assay} from the input
 #' \code{SingleCellExperiment} to use: this assay
 #' should always represent raw counts.
@@ -81,6 +83,18 @@
 #'  To access all MLE parameter
 #' estimates, call \code{fit$mle_params}.
 #'
+#' \strong{Returning a SingleCellExperiment}
+#'
+#' If \code{return_SCE} is true, a call to \code{cellassign} will return
+#' the input SingleCellExperiment, with the following added:
+#' \itemize{
+#' \item A column \code{cellassign_celltype} to \code{colData(sce)} with the MAP
+#' estimate of the cell type
+#' \item A slot \code{sce@metadata$cellassign_fit} containing the cellassign fit.
+#' Note that a \code{SingleCellExperiment} must be provided as \code{exprs_obj}
+#' for this option to be valid.
+#' }
+#'
 #' @examples
 #' data(example_sce)
 #' data(example_rho)
@@ -103,7 +117,7 @@ cellassign <- function(exprs_obj,
                        min_delta = 2,
                        X = NULL,
                        B = 10,
-                       shrinkage = FALSE,
+                       shrinkage = TRUE,
                        n_batches = 1,
                        dirichlet_concentration = 1e-2,
                        rel_tol_adam = 1e-4,
@@ -113,6 +127,7 @@ cellassign <- function(exprs_obj,
                        learning_rate = 0.1,
                        verbose = TRUE,
                        sce_assay = "counts",
+                       return_SCE = FALSE,
                        num_runs = 1) {
 
   # Work out rho
@@ -123,6 +138,13 @@ cellassign <- function(exprs_obj,
     rho <- marker_list_to_mat(marker_gene_info, include_other = FALSE)
   } else {
     stop("marker_gene_info must either be a matrix or list. See ?cellassign")
+  }
+
+  # Logical as to whether input is SCE
+  is_sce <- is(exprs_obj, "SummarizedExperiment")
+
+  if(return_SCE && !is_sce) {
+    stop("return_SCE is set to TRUE but the input object is not a SummarizedExperiment")
   }
 
   # Get expression input
@@ -139,6 +161,14 @@ cellassign <- function(exprs_obj,
 
   stopifnot(is.matrix(Y))
   stopifnot(is.matrix(rho))
+
+  if(!is.null(s)) {
+    stopifnot(length(s) == nrow(Y))
+  }
+
+  if(any(rowSums(Y) == 0) || any(colSums(Y) == 0)) {
+    stop("Genes and/or cells with no mapping counts are present. These should be filtered out prior to input to cellassign")
+  }
 
   if(is.null(rownames(rho))) {
     warning("No gene names supplied - replacing with generics")
@@ -207,6 +237,22 @@ cellassign <- function(exprs_obj,
   })
   # Return best result
   res <- run_results[[which.max(sapply(run_results, function(x) x$lls[length(x$lls)]))]]
+
+  if(return_SCE) {
+    # Now need to parse this into a SingleCellExperiment -
+    # note that we know the input (exprs_obj) is (at least) a
+    # SummarizedExperiment to get this far
+
+    if("cellassign_celltype" %in% names(SummarizedExperiment::colData(exprs_obj))) {
+      warning("Field 'cellassign_celltype' exists in colData of the SCE. Overwriting...")
+    }
+
+    SummarizedExperiment::colData(exprs_obj)[['cellassign_celltype']] <- res$cell_type
+    exprs_obj@metadata$cellassign_fit <- res
+
+    return(exprs_obj)
+
+  }
 
 
   return(res)

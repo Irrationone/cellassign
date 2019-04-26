@@ -9,7 +9,7 @@ cellassign(exprs_obj, marker_gene_info, s = NULL, min_delta = 2,
   dirichlet_concentration = 0.01, rel_tol_adam = 1e-04,
   rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
   learning_rate = 0.1, verbose = TRUE, sce_assay = "counts",
-  num_runs = 1)
+  return_SCE = FALSE, num_runs = 1)
 }
 \arguments{
 \item{exprs_obj}{Either a matrix representing gene
@@ -53,6 +53,9 @@ to perform in each M-step}
 \item{sce_assay}{The \code{assay} from the input
 \code{SingleCellExperiment} to use: this assay
 should always represent raw counts.}
+
+\item{return_SCE}{Logical - should a SingleCellExperiment be returned with the cell
+type annotations added? See details.}
 
 \item{num_runs}{Number of EM runs to perform}
 }
@@ -105,6 +108,18 @@ of class \code{cellassign_fit}. To access the
 MLE estimates of cell types, call \code{fit$cell_type}.
 To access all MLE parameter
 estimates, call \code{fit$mle_params}.
+
+\strong{Returning a SingleCellExperiment}
+
+If \code{return_SCE} is true, a call to \code{cellassign} will return
+the input SingleCellExperiment, with the following added:
+\itemize{
+\item A column \code{cellassign_celltype} to \code{colData(sce)} with the MAP
+estimate of the cell type
+\item A slot \code{sce@metadata$cellassign_fit} containing the cellassign fit.
+Note that a \code{SingleCellExperiment} must be provided as \code{exprs_obj}
+for this option to be valid.
+}
 }
 \examples{
 data(example_sce)
