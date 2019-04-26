@@ -188,6 +188,10 @@ cellassign <- function(exprs_obj,
   C <- ncol(rho)
   P <- ncol(X)
 
+  if(G > 100) {
+    warning(paste("You have specified", G, "input genes. Are you sure these are just your markers? Only the marker genes should be used as input"))
+  }
+
   # Check the dimensions add up
   stopifnot(nrow(X) == N)
   stopifnot(nrow(rho) == G)
