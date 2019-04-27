@@ -43,7 +43,7 @@ conda install -c conda-forge -c bioconda r-cellassign
 
 - [Assigning single-cells to known cell types with CellAssign](https://irrationone.github.io/cellassign/introduction-to-cellassign.html)
 
-- [Constructing marker genes from purified scRNA-seq data](https://irrationone.github.io/cellassign/constructing-markers-from-purified-data.html)
+- [Constructing marker genes from purified bulk/scRNA-seq data](https://irrationone.github.io/cellassign/constructing-markers-from-purified-data.html)
 
 ## Basic usage
 
