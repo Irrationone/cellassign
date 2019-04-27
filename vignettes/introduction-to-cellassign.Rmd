@@ -24,16 +24,10 @@ knitr::opts_chunk$set(
 `cellassign` assigns cells measured using single cell RNA sequencing to known cell types based on marker gene information. Unlike other  methods for assigning cell types from single cell RNA-seq data, `cellassign` does not require labeled single cell or purified bulk expression data -- `cellassign` only needs to know whether or not each given gene is a marker of each cell type:
 
 ```{r, echo = FALSE}
-knitr::include_graphics("cellassign_schematic.png")
+knitr::include_graphics("cellassign_overview.png")
 ```
 
-`cellassign` is implemented using the following probabilistic graphical model:
-
-```{r echo = FALSE}
-knitr::include_graphics("cellassign-graphical-model.png")
-```
-
-Inference is performed using [Tensorflow](http://tensorflow.org/). For more details please see the [manuscript](TODO).
+Inference is performed using [Tensorflow](http://tensorflow.org/). For more details please see the [manuscript](https://www.biorxiv.org/content/10.1101/521914v1).
 
 # Installation
 
