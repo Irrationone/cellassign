@@ -13,13 +13,6 @@
 
 ## Installation
 
-### Installing from conda
-
-With [conda](https://conda.io/miniconda.html), install the current release version of `cellassign` as follows:
-
-``` r
-conda install -c conda-forge -c bioconda r-cellassign
-```
 
 ### Installing from GitHub
 
@@ -37,7 +30,22 @@ install.packages("devtools") # If not already installed
 devtools::install_github("Irrationone/cellassign")
 ```
 
-## Usage
+
+### Installing from conda
+
+With [conda](https://conda.io/miniconda.html), install the current release version of `cellassign` as follows:
+
+``` r
+conda install -c conda-forge -c bioconda r-cellassign
+```
+
+## Vignettes
+
+- [Assigning single-cells to known cell types with CellAssign](https://irrationone.github.io/cellassign/introduction-to-cellassign.html)
+
+- [Constructing marker genes from purified scRNA-seq data](https://irrationone.github.io/cellassign/constructing-markers-from-purified-data.html)
+
+## Basic usage
 
 `cellassign` requires the following inputs:
 
