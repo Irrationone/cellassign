@@ -23,7 +23,13 @@ Suggests:
     BiocStyle,
     dplyr,
     pheatmap,
-    testthat
+    testthat,
+    limma,
+    org.Hs.eg.db,
+    edgeR,
+    matrixStats,
+    plyr,
+    magrittr
 biocViews:
   Software, 
   Transcriptomics, 

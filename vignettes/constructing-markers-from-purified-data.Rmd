@@ -21,6 +21,7 @@ knitr::opts_chunk$set(
 
 ```{r, include = FALSE}
 suppressPackageStartupMessages({
+  library(magrittr)
   library(limma)
   library(org.Hs.eg.db)
   library(edgeR)

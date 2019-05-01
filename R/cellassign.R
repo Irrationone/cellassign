@@ -324,3 +324,11 @@ print.cellassign_fit <- function(x, ...) {
 #' @examples
 #' data(example_TME_markers)
 "example_TME_markers"
+
+#' Example bulk RNA-seq data
+#'
+#' An example bulk RNA-seq dataset from Holik et al. Nucleic Acids Research 2017 to
+#' demonstrate deriving marker genes
+#' @examples
+#' data(holik_data)
+"holik_data"
