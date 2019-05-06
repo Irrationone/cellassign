@@ -171,7 +171,7 @@ cellassign <- function(exprs_obj,
   }
   
   if(any(rowSums(Y) == 0)) {
-    stop("Cells with no mapping counts are present. These should be filtered out prior to input to cellassign.")
+    warning("Cells with no mapping counts are present. You might want to filter these out prior to using cellassign.")
   }
 
   if(is.null(rownames(rho))) {
