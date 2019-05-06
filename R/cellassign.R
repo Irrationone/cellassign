@@ -166,8 +166,12 @@ cellassign <- function(exprs_obj,
     stopifnot(length(s) == nrow(Y))
   }
 
-  if(any(rowSums(Y) == 0) || any(colSums(Y) == 0)) {
-    stop("Genes and/or cells with no mapping counts are present. These should be filtered out prior to input to cellassign")
+  if(any(colSums(Y) == 0)) {
+    warning("Genes with no mapping counts are present. Make sure this is expected -- this can be valid input in some cases (e.g. when cell types are overspecified).")
+  }
+  
+  if(any(rowSums(Y) == 0)) {
+    stop("Cells with no mapping counts are present. These should be filtered out prior to input to cellassign.")
   }
 
   if(is.null(rownames(rho))) {
