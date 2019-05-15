@@ -76,9 +76,6 @@ get_mle_cell_type <- function(gamma) {
 #' @keywords internal
 extract_expression_matrix <- function(exprs_obj, sce_assay = "counts") {
   if(is(exprs_obj, "SummarizedExperiment")) {
-    if(!sce_assay %in% names(SummarizedExperiment::assays(exprs_obj))) {
-      stop(paste("Assay", sce_assay, "is not present in the assays associated with the input SingleCellExperiment"))
-    }
     Y <- t(as.matrix(SummarizedExperiment::assay(exprs_obj, sce_assay)))
   } else if(is.matrix(exprs_obj) && is.numeric(exprs_obj)) {
     Y <- exprs_obj
