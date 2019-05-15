@@ -8,7 +8,8 @@ inference_tensorflow(Y, rho, s, X, G, C, N, P, B = 10, shrinkage,
   verbose = FALSE, n_batches = 1, rel_tol_adam = 1e-04,
   rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
   learning_rate = 1e-04, random_seed = NULL, min_delta = 2,
-  dirichlet_concentration = rep(0.01, C))
+  dirichlet_concentration = rep(0.01, C), zero_inflation_type = "none",
+  scale_type = "unit", scale_shrinkage = FALSE)
 }
 \value{
 A list of MLE cell type calls, MLE parameter estimates,

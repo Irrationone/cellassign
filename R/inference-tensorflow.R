@@ -40,7 +40,10 @@ inference_tensorflow <- function(Y,
                                  learning_rate = 1e-4,
                                  random_seed = NULL,
                                  min_delta = 2,
-                                 dirichlet_concentration = rep(1e-2, C)) {
+                                 dirichlet_concentration = rep(1e-2, C),
+                                 zero_inflation_type = "none",
+                                 scale_type = "unit",
+                                 scale_shrinkage = FALSE) {
   tf$reset_default_graph()
 
   tfd <- tf$contrib$distributions
@@ -50,6 +53,8 @@ inference_tensorflow <- function(Y,
   X_ <- tf$placeholder(tf$float64, shape = shape(NULL, P), name = "X_")
   s_ <- tf$placeholder(tf$float64, shape = shape(NULL), name = "s_")
   rho_ <- tf$placeholder(tf$float64, shape = shape(G,C), name = "rho_")
+  
+  N_dyn <- tf$shape(Y_)[1]
 
   sample_idx <- tf$placeholder(tf$int32, shape = shape(NULL), name = "sample_idx")
 
@@ -70,54 +75,116 @@ inference_tensorflow <- function(Y,
     delta_log_mean <- tf$Variable(0, dtype = tf$float64)
     delta_log_variance <- tf$Variable(1, dtype = tf$float64) # May need to bound this or put a prior over this
   }
+  
+  ## Spline variables
+  a <- tf$exp(tf$Variable(tf$zeros(shape = B, dtype = tf$float64)))
+  b <- tf$exp(tf$constant(rep(-log(b_init), B), dtype = tf$float64))
 
   ## Regular variables
-  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
+  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = 0, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
                            constraint = function(x) tf$clip_by_value(x, tf$constant(log(min_delta), dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
 
   beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
 
   theta_logit <- tf$Variable(tf$random_normal(shape(C), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
 
-  ## Spline variables
-  a <- tf$exp(tf$Variable(tf$zeros(shape = B, dtype = tf$float64)))
-  b <- tf$exp(tf$constant(rep(-log(b_init), B), dtype = tf$float64))
-
+  #scale_log <- tf$Variable(tf$random_normal(shape(G,C), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  if (scale_type == "unit") {
+    scale_log <- tf$zeros(shape(G,C), dtype = tf$float64)
+  } else if (scale_type == "constant") {
+    scale_var <- tf$Variable(tf$random_normal(shape(), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
+                             constraint = function(x) tf$clip_by_value(x, tf$constant(log(0.5), dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
+    
+    scale_log <- tf$ones(shape(G,C), dtype = tf$float64) * scale_var
+  } else if (scale_type == "gene-specific") {
+    ## TODO: May need a shrinkage term
+    scale_var <- tf$Variable(tf$random_normal(shape(G), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
+                             constraint = function(x) tf$clip_by_value(x, tf$constant(log(0.5), dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
+    
+    scale_log <- tf$transpose(tf$ones(shape(C,1), dtype = tf$float64) * scale_var, shape(1,0))
+    
+    #scale_log_mean <- tf$Variable(0, dtype = tf$float64)
+    #scale_log_variance <- tf$Variable(1, dtype = tf$float64) # May need to bound this or put a prior over this
+  } else if (scale_type == "mean-dependent") {
+    #gene_means <- tf$reduce_mean(Y_, axis = 0L)
+    scale_intercept <- tf$Variable(tf$random_normal(shape(), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+    
+    scale_var <- tf$Variable(tf$random_normal(shape(), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+    
+    #scale_log <-  tf$transpose(tf$ones(shape(C,1), dtype = tf$float64) * (gene_means * tf$exp(scale_var)), shape(1,0))
+    ## TODO
+  } else {
+    stop("Unrecognized")
+  }
+  
+  if (zero_inflation_type == "none") {
+    zero_inflation_rate <- tf$constant(0, dtype = tf$float64)
+  } else if (zero_inflation_type == "global") {
+    zero_inflation_logit <- tf$Variable(tf$random_normal(shape(2), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+    log_zero_inflation_rate <- tf$nn$log_softmax(zero_inflation_logit)
+    
+    lzi_rate_pos <- log_zero_inflation_rate[1]
+    lzi_rate_neg <- log_zero_inflation_rate[2]
+  } else if (zero_inflation_type == "gene-specific") {
+    zero_inflation_logit <- tf$Variable(tf$random_normal(shape(G,2), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+    log_zero_inflation_rate <- tf$nn$log_softmax(zero_inflation_logit)
+    
+    lzi_rate_pos <- log_zero_inflation_rate[,1]
+    lzi_rate_neg <- log_zero_inflation_rate[,2]
+  } else {
+    stop("Unrecognized.")
+  }
+  
+  
+  
   # Stop gradient for irrelevant entries of delta_log
   delta_log <- entry_stop_gradients(delta_log, tf$cast(rho_, tf$bool))
 
   # Transformed variables
   delta = tf$exp(delta_log)
+  #delta <- delta_log
   theta_log = tf$nn$log_softmax(theta_logit)
+  
 
   # Model likelihood
-  base_mean <- tf$transpose(tf$einsum('np,gp->gn', X_, beta) + tf$log(s_)) #+ tf$add(tf$log(s_), tf$log(control_pct_), name = "s_to_control"))
+  base_mean <- tf$transpose(tf$einsum('np,gp->gn', X_, beta)) #+ tf$log(s_)) #+ tf$add(tf$log(s_), tf$log(control_pct_), name = "s_to_control"))
 
   base_mean_list <- list()
   for(c in seq_len(C)) base_mean_list[[c]] <- base_mean
   mu_ngc = tf$add(tf$stack(base_mean_list, 2), tf$multiply(delta, rho_), name = "adding_base_mean_to_delta_rho")
-
-  mu_cng = tf$transpose(mu_ngc, shape(2,0,1))
-
-  mu_cngb <- tf$tile(tf$expand_dims(mu_cng, axis = 3L), c(1L, 1L, 1L, B))
-
-  phi_cng <- tf$reduce_sum(a * tf$exp(-b * tf$square(mu_cngb - basis_means)), 3L) + LOWER_BOUND
-  phi <- tf$transpose(phi_cng, shape(1,2,0))
-
-  mu_ngc <- tf$transpose(mu_cng, shape(1,2,0))
-
-  mu_ngc <- tf$exp(mu_ngc)
-
-  p = mu_ngc / (mu_ngc + phi)
-
-  nb_pdf <- tfd$NegativeBinomial(probs = p, total_count = phi)
-
+  
+  mu_ngc <- tf$nn$relu(mu_ngc)
+  
+  if (scale_type == "mean-dependent") {
+    scale <- mu_ngc * tf$exp(scale_var) + tf$exp(scale_intercept) + LOWER_BOUND
+  } else {
+    scale <- tf$exp(scale_log)
+  }
+  
+  
+  #mu_ngc = tf$exp(mu_ngc)
+  #mu_ngcb <- tf$tile(tf$expand_dims(mu_ngc, axis = 3L), c(1L, 1L, 1L, B))
+  
+  #scale <- tf$reduce_sum(a * tf$exp(-b * tf$square(mu_ngcb - basis_means)), 3L) + LOWER_BOUND
+  
+  g_pdf <- tfd$Normal(loc = mu_ngc, scale = scale)
 
   Y_tensor_list <- list()
   for(c in seq_len(C)) Y_tensor_list[[c]] <- Y_
   Y__ = tf$stack(Y_tensor_list, axis = 2)
-
-  y_log_prob_raw <- nb_pdf$log_prob(Y__)
+  
+  if (zero_inflation_type != "none") {
+    gprob <- g_pdf$log_prob(Y__)
+    
+    prob_1 <- tf$transpose(gprob, shape(0,2,1)) + lzi_rate_neg
+    prob_2 <- tf$ones(list(N_dyn,C,G), dtype = tf$float64) * lzi_rate_pos
+    
+    y_log_prob_raw <- tf$cast(Y__ == 0,  dtype = tf$float64) * tf$transpose(tf$reduce_logsumexp(tf$stack(list(prob_1, prob_2), axis = 3L), axis = 3L), shape(0, 2, 1)) + 
+      tf$cast(Y__ != 0, dtype = tf$float64) * tf$transpose(prob_1, shape(0, 2, 1))
+  } else {
+    y_log_prob_raw <- g_pdf$log_prob(Y__)
+  }
+  
   y_log_prob <- tf$transpose(y_log_prob_raw, shape(0,2,1))
   y_log_prob_sum <- tf$reduce_sum(y_log_prob, 2L) + theta_log
   p_y_on_c_unorm <- tf$transpose(y_log_prob_sum, shape(1,0))
@@ -134,8 +201,23 @@ inference_tensorflow <- function(Y,
   if (shrinkage) {
     delta_log_prior <- tfd$Normal(loc = delta_log_mean * rho_,
                                   scale = delta_log_variance)
-    delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
+    delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log) * rho_)
   }
+  
+  if (scale_type == "gene-specific") {
+    # scale_log_prior <- tfd$Normal(loc = scale_log_mean,
+    #                               scale = scale_log_variance)
+    # scale_log_prob <- -tf$reduce_sum(scale_log_prior$log_prob(scale_log))
+    
+    scale_log_prior <- tfd$Gamma(concentration = tf$constant(10, dtype = tf$float64),
+                                 rate = tf$constant(10, dtype = tf$float64))
+    scale_log_prob <- -tf$reduce_sum(scale_log_prior$log_prob(scale))
+    
+    # scale_variance_prior <- tfd$Gamma(concentration = tf$constant(1, dtype = tf$float64),
+    #                                   rate = tf$constant(10, dtype = tf$float64))
+    # 
+    # scale_variance_prob <- -tf$reduce_sum(scale_variance_prior$log_prob(scale_log_variance))
+  } 
   
   THETA_LOWER_BOUND <- 1e-20
 
@@ -147,7 +229,10 @@ inference_tensorflow <- function(Y,
   if (shrinkage) {
     Q <- Q + delta_log_prob
   }
-
+  
+  if ((scale_type == "gene-specific") && scale_shrinkage) {
+    Q <- Q + scale_log_prob #+ scale_variance_prob
+  } 
 
   optimizer = tf$train$AdamOptimizer(learning_rate=learning_rate)
   train = optimizer$minimize(Q)
@@ -159,7 +244,13 @@ inference_tensorflow <- function(Y,
   if (shrinkage) {
     L_y <- L_y - delta_log_prob
   }
-
+  
+  if ((scale_type == "gene-specific") && scale_shrinkage) {
+    L_y <- L_y - scale_log_prob #- scale_variance_prob
+  }
+  
+  ## COMPUTE RESIDUALS
+  resids <- Y_ - tf$einsum('ngc,nc->ng', mu_ngc, gamma)
 
   # Split the data
   splits <- split(sample(seq_len(N), size = N, replace = FALSE), seq_len(n_batches))
@@ -197,6 +288,24 @@ inference_tensorflow <- function(Y,
         if(mi %% 20 == 0) {
           if (verbose) {
             message(paste(mi, sess$run(Q, feed_dict = gfd)))
+            
+            if (!scale_type %in% c("unit", "constant")) {
+              # message(sess$run(delta_log_prob, feed_dict = gfd))
+              # message(sess$run(tf$reduce_min(scale), feed_dict = gfd))
+              # message(sess$run(tf$reduce_max(scale), feed_dict = gfd))
+            }
+            
+            if (scale_type == "gene-specific" && scale_shrinkage) {
+              message(sess$run(scale_log_prob, feed_dict = gfd))
+            }
+            
+            if (scale_type == "mean-dependent") {
+              message(paste(sess$run(tf$exp(scale_var), feed_dict = gfd), sess$run(tf$exp(scale_intercept), feed_dict = gfd)))
+            }
+            
+            if (zero_inflation_type != "none") {
+              #message(sess$run(tf$exp(lzi_rate_neg[1]), feed_dict = gfd))
+            }
           }
           Q_new <- sess$run(Q, feed_dict = gfd)
           Q_diff = -(Q_new - Q_old) / abs(Q_old)
@@ -219,8 +328,23 @@ inference_tensorflow <- function(Y,
   }
 
   # Finished EM - peel off final values
-  variable_list <- list(delta, beta, phi, gamma, mu_ngc, a, tf$exp(theta_log))
-  variable_names <- c("delta", "beta", "phi", "gamma", "mu", "a", "theta")
+  variable_list <- list(delta, beta, gamma, mu_ngc, tf$exp(theta_log), scale, resids)
+  variable_names <- c("delta", "beta", "gamma", "mu", "theta", "scale", "resids")
+  
+  if (zero_inflation_type != "none") {
+    variable_list <- c(variable_list, list(tf$exp(lzi_rate_pos)))
+    variable_names <- c(variable_names, "zero_inflation_rate")
+  }
+  
+  # if (scale_type == "gene-specific" && scale_shrinkage) {
+  #   variable_list <- c(variable_list, list(scale_log_mean, scale_log_variance))
+  #   variable_names <- c(variable_names, "scale_log_mean", "scale_log_variance")
+  # }
+  
+  if (scale_type == "mean-dependent") {
+    variable_list <- c(variable_list, list(tf$exp(scale_var)))
+    variable_names <- c(variable_names, "scale_multiplier")
+  }
 
 
   if (shrinkage) {
@@ -242,6 +366,10 @@ inference_tensorflow <- function(Y,
   colnames(mle_params$delta) <- colnames(rho)
   rownames(mle_params$beta) <- rownames(rho)
   names(mle_params$theta) <- colnames(rho)
+  #rownames(mle_params$scale) <- rownames(rho)
+  #colnames(mle_params$scale) <- colnames(rho)
+  
+  colnames(mle_params$resids) <- rownames(rho)
 
 
   cell_type <- get_mle_cell_type(mle_params$gamma)

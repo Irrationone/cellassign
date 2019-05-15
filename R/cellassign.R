@@ -128,7 +128,10 @@ cellassign <- function(exprs_obj,
                        verbose = TRUE,
                        sce_assay = "counts",
                        return_SCE = FALSE,
-                       num_runs = 1) {
+                       num_runs = 1,
+                       zero_inflation_type = "none",
+                       scale_type = "unit",
+                       scale_shrinkage = FALSE) {
 
   # Work out rho
   rho <- NULL
@@ -239,7 +242,10 @@ cellassign <- function(exprs_obj,
                                 max_iter_em = max_iter_em,
                                 learning_rate = learning_rate,
                                 min_delta = min_delta,
-                                dirichlet_concentration = dirichlet_concentration)
+                                dirichlet_concentration = dirichlet_concentration,
+                                zero_inflation_type = zero_inflation_type,
+                                scale_type = scale_type,
+                                scale_shrinkage = scale_shrinkage)
 
     return(structure(res, class = "cellassign_fit"))
   })

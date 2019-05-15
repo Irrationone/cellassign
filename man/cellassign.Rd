@@ -9,7 +9,8 @@ cellassign(exprs_obj, marker_gene_info, s = NULL, min_delta = 2,
   dirichlet_concentration = 0.01, rel_tol_adam = 1e-04,
   rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
   learning_rate = 0.1, verbose = TRUE, sce_assay = "counts",
-  return_SCE = FALSE, num_runs = 1)
+  return_SCE = FALSE, num_runs = 1, zero_inflation_type = "none",
+  scale_type = "unit", scale_shrinkage = FALSE)
 }
 \arguments{
 \item{exprs_obj}{Either a matrix representing gene
