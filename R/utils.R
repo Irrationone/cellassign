@@ -126,7 +126,7 @@ initialize_X <- function(X, N, verbose = FALSE) {
 #' @return Installs tensorflow if not already installed
 .onLoad <- function(libname, pkgname) {
   if(is.null(tensorflow::tf_version())) {
-    message("Tensorflow not installed - attempting to install")
+    ## Tensorflow not installed - attempting to install
     tensorflow::install_tensorflow()
   }
 }
