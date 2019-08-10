@@ -18,7 +18,7 @@ Prints a structured representation of the \code{cellassign}
 Print a \code{cellassign} fit
 }
 \examples{
-data(example_cellassign)
-print(example_cellassign)
+data(example_cellassign_fit)
+print(example_cellassign_fit)
 
 }

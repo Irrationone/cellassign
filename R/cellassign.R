@@ -272,8 +272,8 @@ cellassign <- function(exprs_obj,
 #' @param ... Additional arguments (unused)
 #'
 #' @examples
-#' data(example_cellassign)
-#' print(example_cellassign)
+#' data(example_cellassign_fit)
+#' print(example_cellassign_fit)
 #'
 #' @return Prints a structured representation of the \code{cellassign}
 #'
@@ -295,7 +295,7 @@ print.cellassign <- function(x, ...) {
 #'
 #' An example \code{SingleCellExperiment} for 10 marker genes and 500 cells.
 #'
-#' @seealso example_cellassign
+#' @seealso example_cellassign_fit
 #' @examples
 #' data(example_sce)
 "example_sce"
@@ -305,7 +305,7 @@ print.cellassign <- function(x, ...) {
 #' An example matrix for 10 genes and 2 cell types showing the membership
 #' of marker genes to cell types
 #'
-#' @seealso example_cellassign
+#' @seealso example_cellassign_fit
 #' @examples
 #' data(example_rho)
 "example_rho"
@@ -315,7 +315,7 @@ print.cellassign <- function(x, ...) {
 #' An example fit of calling \code{cellassign} on both
 #' \code{example_rho} and \code{example_sce}
 #'
-#' @seealso example_cellassign
+#' @seealso example_cellassign_fit
 #' @examples
 #' data(example_cellassign_fit)
 "example_cellassign_fit"

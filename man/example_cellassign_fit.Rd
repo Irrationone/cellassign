@@ -16,6 +16,6 @@ An example fit of calling \code{cellassign} on both
 data(example_cellassign_fit)
 }
 \seealso{
-example_cellassign
+example_cellassign_fit
 }
 \keyword{datasets}
