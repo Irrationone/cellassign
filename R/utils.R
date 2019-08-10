@@ -80,7 +80,7 @@ extract_expression_matrix <- function(exprs_obj, sce_assay = "counts") {
   } else if(is.matrix(exprs_obj) && is.numeric(exprs_obj)) {
     Y <- exprs_obj
   } else {
-    stop("Input exprs_obj must either be an ExpressionSet or numeric matrix of gene expression")
+    stop("Input exprs_obj must either be a SummarizedExperiment or numeric matrix of gene expression")
   }
   return(Y)
 }
@@ -119,15 +119,14 @@ initialize_X <- function(X, N, verbose = FALSE) {
 }
 
 
-#' Check for tensorflow 
-#' 
+#' Check for tensorflow
+#'
 #' @keywords internal
-#' 
+#'
 #' @return Installs tensorflow if not already installed
 .onLoad <- function(libname, pkgname) {
   if(is.null(tensorflow::tf_version())) {
-    ## Tensorflow not installed - attempting to install
-    tensorflow::install_tensorflow()
+    stop("Tensorflow installation not detected. Please run 'tensorflow::install_tensorflow()' to continue...")
   }
 }
 
