@@ -58,11 +58,18 @@ Note that the `tf` object is created automatically when the `tensorflow` library
 
 For more details see the [Rstudio page on tensorflow installation](https://tensorflow.rstudio.com/tensorflow/articles/installation.html).
 
-`cellassign` can then be installed using the `devtools` package via
+`cellassign` can then be installed through Bioconductor via
+
+```{r, eval=FALSE}
+BiocManager::install('cellassign')
+```
+
+or the development version through github using the `devtools` package :
 
 ```{r, eval=FALSE}
 devtools::install_github("Irrationone/cellassign")
 ```
+
 
 # Basic usage
 
