@@ -76,9 +76,9 @@
 #' covariates be standardized
 #' to have mean 0 and standard deviation 1.
 #'
-#' \strong{cellassign_fit}
+#' \strong{cellassign}
 #' A call to \code{cellassign} returns an object
-#' of class \code{cellassign_fit}. To access the
+#' of class \code{cellassign}. To access the
 #' MLE estimates of cell types, call \code{fit$cell_type}.
 #'  To access all MLE parameter
 #' estimates, call \code{fit$mle_params}.
@@ -90,7 +90,7 @@
 #' \itemize{
 #' \item A column \code{cellassign_celltype} to \code{colData(sce)} with the MAP
 #' estimate of the cell type
-#' \item A slot \code{sce@metadata$cellassign_fit} containing the cellassign fit.
+#' \item A slot \code{sce@metadata$cellassign} containing the cellassign fit.
 #' Note that a \code{SingleCellExperiment} must be provided as \code{exprs_obj}
 #' for this option to be valid.
 #' }
@@ -110,7 +110,7 @@
 #' @export
 #'
 #' @return
-#' An object of class \code{cellassign_fit}. See \code{details}
+#' An object of class \code{cellassign}. See \code{details}
 cellassign <- function(exprs_obj,
                        marker_gene_info,
                        s = NULL,
@@ -169,7 +169,7 @@ cellassign <- function(exprs_obj,
   if(any(colSums(Y) == 0)) {
     warning("Genes with no mapping counts are present. Make sure this is expected -- this can be valid input in some cases (e.g. when cell types are overspecified).")
   }
-  
+
   if(any(rowSums(Y) == 0)) {
     warning("Cells with no mapping counts are present. You might want to filter these out prior to using cellassign.")
   }
@@ -241,7 +241,7 @@ cellassign <- function(exprs_obj,
                                 min_delta = min_delta,
                                 dirichlet_concentration = dirichlet_concentration)
 
-    return(structure(res, class = "cellassign_fit"))
+    return(structure(res, class = "cellassign"))
   })
   # Return best result
   res <- run_results[[which.max(sapply(run_results, function(x) x$lls[length(x$lls)]))]]
@@ -256,7 +256,7 @@ cellassign <- function(exprs_obj,
     }
 
     SummarizedExperiment::colData(exprs_obj)[['cellassign_celltype']] <- res$cell_type
-    exprs_obj@metadata$cellassign_fit <- res
+    exprs_obj@metadata$cellassign <- res
 
     return(exprs_obj)
 
@@ -268,17 +268,17 @@ cellassign <- function(exprs_obj,
 
 #' Print a \code{cellassign} fit
 #'
-#' @param x An object of class \code{cellassign_fit}
+#' @param x An object of class \code{cellassign}
 #' @param ... Additional arguments (unused)
 #'
 #' @examples
-#' data(example_cellassign_fit)
-#' print(example_cellassign_fit)
+#' data(example_cellassign)
+#' print(example_cellassign)
 #'
-#' @return Prints a structured representation of the \code{cellassign_fit}
+#' @return Prints a structured representation of the \code{cellassign}
 #'
 #' @export
-print.cellassign_fit <- function(x, ...) {
+print.cellassign <- function(x, ...) {
   N <- nrow(x$mle_params$gamma)
   C <- ncol(x$mle_params$gamma)
   G <- nrow(x$mle_params$delta)
@@ -295,7 +295,7 @@ print.cellassign_fit <- function(x, ...) {
 #'
 #' An example \code{SingleCellExperiment} for 10 marker genes and 500 cells.
 #'
-#' @seealso example_cellassign_fit
+#' @seealso example_cellassign
 #' @examples
 #' data(example_sce)
 "example_sce"
@@ -305,7 +305,7 @@ print.cellassign_fit <- function(x, ...) {
 #' An example matrix for 10 genes and 2 cell types showing the membership
 #' of marker genes to cell types
 #'
-#' @seealso example_cellassign_fit
+#' @seealso example_cellassign
 #' @examples
 #' data(example_rho)
 "example_rho"
@@ -315,7 +315,7 @@ print.cellassign_fit <- function(x, ...) {
 #' An example fit of calling \code{cellassign} on both
 #' \code{example_rho} and \code{example_sce}
 #'
-#' @seealso example_cellassign_fit
+#' @seealso example_cellassign
 #' @examples
 #' data(example_cellassign_fit)
 "example_cellassign_fit"

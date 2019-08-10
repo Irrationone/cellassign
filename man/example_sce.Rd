@@ -15,6 +15,6 @@ An example \code{SingleCellExperiment} for 10 marker genes and 500 cells.
 data(example_sce)
 }
 \seealso{
-example_cellassign_fit
+example_cellassign
 }
 \keyword{datasets}

@@ -14,7 +14,7 @@ test_that("cellassign(...) returns a valid object", {
                     max_iter_adam = 2,
                     max_iter_em = 2)
 
-  expect_is(fit, "cellassign_fit")
+  expect_is(fit, "cellassign")
 
   cell_types <- fit$cell_type
 
@@ -50,7 +50,7 @@ test_that("cellassign(...) returns a valid SingleCellExperiment", {
   expect_is(sce, "SingleCellExperiment")
 
   expect_true("cellassign_celltype" %in% names(colData(sce)))
-  expect_true("cellassign_fit" %in% names(sce@metadata))
+  expect_true("cellassign" %in% names(sce@metadata))
 
 })
 

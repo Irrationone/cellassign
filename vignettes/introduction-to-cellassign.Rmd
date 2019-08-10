@@ -124,7 +124,7 @@ fit <- cellassign(exprs_obj = example_sce,
                   verbose = FALSE)
 ```
 
-This returns a `cellassign_fit` object:
+This returns a `cellassign` object:
 
 ```{r}
 print(fit)

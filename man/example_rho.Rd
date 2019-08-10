@@ -16,6 +16,6 @@ of marker genes to cell types
 data(example_rho)
 }
 \seealso{
-example_cellassign_fit
+example_cellassign
 }
 \keyword{datasets}

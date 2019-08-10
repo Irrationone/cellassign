@@ -60,7 +60,7 @@ type annotations added? See details.}
 \item{num_runs}{Number of EM runs to perform}
 }
 \value{
-An object of class \code{cellassign_fit}. See \code{details}
+An object of class \code{cellassign}. See \code{details}
 }
 \description{
 Automatically annotate cells to known types based
@@ -102,9 +102,9 @@ recommended that any numerical (ie non-factor or one-hot-encoded)
 covariates be standardized
 to have mean 0 and standard deviation 1.
 
-\strong{cellassign_fit}
+\strong{cellassign}
 A call to \code{cellassign} returns an object
-of class \code{cellassign_fit}. To access the
+of class \code{cellassign}. To access the
 MLE estimates of cell types, call \code{fit$cell_type}.
 To access all MLE parameter
 estimates, call \code{fit$mle_params}.
@@ -116,7 +116,7 @@ the input SingleCellExperiment, with the following added:
 \itemize{
 \item A column \code{cellassign_celltype} to \code{colData(sce)} with the MAP
 estimate of the cell type
-\item A slot \code{sce@metadata$cellassign_fit} containing the cellassign fit.
+\item A slot \code{sce@metadata$cellassign} containing the cellassign fit.
 Note that a \code{SingleCellExperiment} must be provided as \code{exprs_obj}
 for this option to be valid.
 }
