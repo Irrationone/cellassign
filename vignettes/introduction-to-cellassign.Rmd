@@ -54,6 +54,8 @@ hello <- tf$constant('Hello, TensorFlow!')
 sess$run(hello)
 ```
 
+Note that the `tf` object is created automatically when the `tensorflow` library is loaded to provide access to the Tensorflow interface.
+
 For more details see the [Rstudio page on tensorflow installation](https://tensorflow.rstudio.com/tensorflow/articles/installation.html).
 
 `cellassign` can then be installed using the `devtools` package via
