@@ -15,7 +15,6 @@ entry_stop_gradients <- function(target, mask) {
 #' cellassign inference in tensorflow, semi-supervised version
 #'
 #' @import tensorflow
-#' @importFrom glue glue
 #'
 #' @return A list of MLE cell type calls, MLE parameter estimates,
 #' and log likelihoods during optimization.
@@ -136,7 +135,7 @@ inference_tensorflow <- function(Y,
                                   scale = delta_log_variance)
     delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
   }
-  
+
   THETA_LOWER_BOUND <- 1e-20
 
   theta_log_prior <- tfd$Dirichlet(concentration = tf$constant(dirichlet_concentration, dtype = tf$float64))
@@ -209,7 +208,11 @@ inference_tensorflow <- function(Y,
     }
 
     ll_diff <- (ll - ll_old) / abs(ll_old)
-    print(glue("{mi}\tL old: {ll_old}; L new: {ll}; Difference (%): {ll_diff}"))
+
+    if(verbose) {
+      message(sprintf("%i\tL old: %f; L new: %f; Difference (%%): %f",
+                      mi, ll_old, ll, ll_diff))
+    }
     ll_old <- ll
     log_liks <- c(log_liks, ll)
 

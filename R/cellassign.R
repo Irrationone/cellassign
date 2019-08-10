@@ -283,11 +283,11 @@ print.cellassign <- function(x, ...) {
   C <- ncol(x$mle_params$gamma)
   G <- nrow(x$mle_params$delta)
   P <- ncol(x$mle_params$beta) - 1
-  cat(glue::glue("A cellassign fit for {N} cells, {G} genes, {C} cell types with {P} covariates
-           ",
+  cat(sprintf("A cellassign fit for %i cells, %i genes, %i cell types with %i covariates
+           ", N, G, C, P),
            "To access MLE cell types, call x$cell_type
            ",
-           "To access MLE parameter estimates, call x$mle_params\n\n"))
+           "To access MLE parameter estimates, call x$mle_params\n\n")
 }
 
 
