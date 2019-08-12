@@ -130,22 +130,22 @@ This returns a `cellassign` object:
 print(fit)
 ```
 
-We can access the MLE estimates of cell type through `fit$cell_type`:
+We can access the maximum likelihood estimates (MLE)  of cell type using the `celltypes` function:
 
 ```{r}
-print(head(fit$cell_type))
+print(head(celltypes(fit)))
 ```
 
-and all MLE parameter estimates in `fit$mle_params`:
+and all MLE parameters using `mleparams`:
 
 ```{r}
-print(str(fit$mle_params))
+print(str(mleparams(fit)))
 ```
 
-We can also visualize the probabilities of assignment that are stored in the `fit$mle_params$gamma` matrix for each cell and cell type:
+We can also visualize the probabilities of assignment using the `cellprobs` function that returns a probability matrix for each cell and cell type:
 
 ```{r}
-pheatmap::pheatmap(fit$mle_params$gamma)
+pheatmap::pheatmap(cellprobs(fit))
 ```
 
 
@@ -153,7 +153,7 @@ Finally, since this is simulated data we can check the concordance
 with the true group values:
 
 ```{r}
-print(table(example_sce$Group, fit$cell_type))
+print(table(example_sce$Group, celltypes(fit)))
 ```
 
 # Example set of markers for tumour microenvironment

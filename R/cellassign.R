@@ -285,11 +285,84 @@ print.cellassign <- function(x, ...) {
   P <- ncol(x$mle_params$beta) - 1
   cat(sprintf("A cellassign fit for %i cells, %i genes, %i cell types with %i covariates
            ", N, G, C, P),
-           "To access MLE cell types, call x$cell_type
+           "To access cell types, call celltypes(x)
            ",
-           "To access MLE parameter estimates, call x$mle_params\n\n")
+           "To access cell type probabilities, call cellprobs(x)\n\n")
 }
 
+#' @rdname celltypes
+#' @export
+celltypes <- function(x) {
+  UseMethod("celltypes", x)
+}
+
+#' @rdname cellprobs
+#' @export
+cellprobs <- function(x) {
+  UseMethod("cellprobs", x)
+}
+
+#' @rdname mleparams
+#' @export
+mleparams <- function(x) {
+  UseMethod("mleparams", x)
+}
+
+#' Get the cell type assignments of a \code{cellassign} fit
+#'
+#' Get the MLE cell type estimates for each cell
+#'
+#' @return A character vector with the MLE cell type for each cell
+#'
+#' @param x An object of class \code{cellassign} returned by a call to \code{cellassign(...)}
+#'
+#' @rdname celltypes
+#' @export
+#'
+#' @examples
+#' data(example_cellassign_fit)
+#' celltypes(example_cellassign_fit)
+celltypes.cellassign <- function(x) {
+  stopifnot(is(x, 'cellassign'))
+  x$cell_type
+}
+
+#' Get the cell assignment probabilities of a \code{cellassign} fit
+#'
+#' Get the MLE cell type assignment probabilities for each cell
+#'
+#' @param x An object of class \code{cellassign} returned by a call to \code{cellassign(...)}
+#'
+#' @return A cell by celltype matrix with assignment probabilities
+#'
+#' @rdname cellprobs
+#' @export
+#'
+#' @examples
+#' data(example_cellassign_fit)
+#' cellprobs(example_cellassign_fit)
+cellprobs.cellassign <- function(x) {
+  stopifnot(is(x, 'cellassign'))
+  x$mle_params$gamma
+}
+
+#' Get the MLE parameter list of a \code{cellassign} fit
+#'
+#' @return A list of MLE parameter estimates from cellassign
+#'
+#' @param x An object of class \code{cellassign} returned by a call to \code{cellassign(...)}
+#'
+#' @rdname mleparams
+#' @export
+#'
+#' @examples
+#' data(example_cellassign_fit)
+#' mleparams(example_cellassign_fit)
+#' @export
+mleparams.cellassign <- function(x) {
+  stopifnot(is(x, 'cellassign'))
+  x$mle_params
+}
 
 #' Example SingleCellExperiment
 #'
