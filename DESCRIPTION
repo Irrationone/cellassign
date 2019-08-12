@@ -12,7 +12,6 @@ Depends: R (>= 3.6)
 Imports:
     methods,
     stats,
-    glue,
     tensorflow,
     SummarizedExperiment,
     scran
