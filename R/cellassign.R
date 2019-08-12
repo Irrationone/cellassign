@@ -17,7 +17,8 @@
 #' @param shrinkage Logical - should the delta parameters
 #' have hierarchical shrinkage?
 #' @param n_batches Number of data subsample batches to use in inference
-#' @param dirichlet_concentration Dirichlet concentration parameter for cell type abundances
+#' @param dirichlet_concentration Dirichlet concentration parameter for cell
+#' type abundances
 #' @param rel_tol_adam The change in Q function value (in pct) below which
 #' each optimization round is considered converged
 #' @param rel_tol_em The change in log marginal likelihood value (in pct)
@@ -27,7 +28,8 @@
 #' @param max_iter_em Maximum number of EM iterations to perform
 #' @param learning_rate Learning rate of ADAM optimization
 #' @param verbose Logical - should running info be printed?
-#' @param return_SCE Logical - should a SingleCellExperiment be returned with the cell
+#' @param return_SCE Logical - should a SingleCellExperiment be returned
+#' with the cell
 #' type annotations added? See details.
 #' @param sce_assay The \code{assay} from the input
 #' \code{SingleCellExperiment} to use: this assay
@@ -331,7 +333,8 @@ celltypes.cellassign <- function(x) {
 #'
 #' Get the MLE cell type assignment probabilities for each cell
 #'
-#' @param x An object of class \code{cellassign} returned by a call to \code{cellassign(...)}
+#' @param x An object of class \code{cellassign}
+#' returned by a call to \code{cellassign(...)}
 #'
 #' @return A cell by celltype matrix with assignment probabilities
 #'
@@ -350,7 +353,8 @@ cellprobs.cellassign <- function(x) {
 #'
 #' @return A list of MLE parameter estimates from cellassign
 #'
-#' @param x An object of class \code{cellassign} returned by a call to \code{cellassign(...)}
+#' @param x An object of class \code{cellassign} returned
+#' by a call to \code{cellassign(...)}
 #'
 #' @rdname mleparams
 #' @export
