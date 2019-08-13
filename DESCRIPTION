@@ -1,5 +1,5 @@
 Package: cellassign
-Version: 0.99.9
+Version: 0.99.10
 Title: Automated, probabilistic assignment of scRNA-seq to cell types
 Description: CellAssign assigns cells measured with scRNA-seq to 
 both known and de novo cell types based on the declaring certain 
