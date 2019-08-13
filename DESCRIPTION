@@ -40,3 +40,4 @@ ByteCompile: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.1
 VignetteBuilder: knitr
+BugReports: https://github.com/irrationone/cellassign/issues

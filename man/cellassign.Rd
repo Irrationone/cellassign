@@ -33,7 +33,8 @@ have hierarchical shrinkage?}
 
 \item{n_batches}{Number of data subsample batches to use in inference}
 
-\item{dirichlet_concentration}{Dirichlet concentration parameter for cell type abundances}
+\item{dirichlet_concentration}{Dirichlet concentration parameter for cell
+type abundances}
 
 \item{rel_tol_adam}{The change in Q function value (in pct) below which
 each optimization round is considered converged}
@@ -54,7 +55,8 @@ to perform in each M-step}
 \code{SingleCellExperiment} to use: this assay
 should always represent raw counts.}
 
-\item{return_SCE}{Logical - should a SingleCellExperiment be returned with the cell
+\item{return_SCE}{Logical - should a SingleCellExperiment be returned
+with the cell
 type annotations added? See details.}
 
 \item{num_runs}{Number of EM runs to perform}

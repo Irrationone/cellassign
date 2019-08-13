@@ -10,7 +10,8 @@ cellprobs(x)
 \method{cellprobs}{cellassign}(x)
 }
 \arguments{
-\item{x}{An object of class \code{cellassign} returned by a call to \code{cellassign(...)}}
+\item{x}{An object of class \code{cellassign}
+returned by a call to \code{cellassign(...)}}
 }
 \value{
 A cell by celltype matrix with assignment probabilities

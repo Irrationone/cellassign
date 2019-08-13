@@ -10,7 +10,8 @@ mleparams(x)
 \method{mleparams}{cellassign}(x)
 }
 \arguments{
-\item{x}{An object of class \code{cellassign} returned by a call to \code{cellassign(...)}}
+\item{x}{An object of class \code{cellassign} returned
+by a call to \code{cellassign(...)}}
 }
 \value{
 A list of MLE parameter estimates from cellassign
