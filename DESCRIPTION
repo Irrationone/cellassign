@@ -1,11 +1,7 @@
 Package: cellassign
 Version: 0.99.10
 Title: Automated, probabilistic assignment of scRNA-seq to cell types
-Description: CellAssign assigns cells measured with scRNA-seq to 
-both known and de novo cell types based on the declaring certain 
-genes as markers for different cell types. The result is the 
-probability that each cell is of a given cell type, or of an 
-"other" cell type that doesn't match any markers provided.
+Description: CellAssign assigns cells measured with scRNA-seq to both known and de novo cell types based on the declaring certain genes as markers for different cell types.
 Authors@R: c(
   person("Allen", "Zhang", email = "alzhang@bccrc.ca", role = c("aut")),
   person("Kieran", "Campbell", email = "kieranrcampbell@gmail.com", role = c("aut", "cre"))
