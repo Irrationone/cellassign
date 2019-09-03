@@ -4,7 +4,7 @@
 \name{example_cellassign_fit}
 \alias{example_cellassign_fit}
 \title{Example cellassign fit}
-\format{An object of class \code{cellassign_fit} of length 3.}
+\format{An object of class \code{cellassign} of length 3.}
 \usage{
 example_cellassign_fit
 }

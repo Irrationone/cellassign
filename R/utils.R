@@ -80,7 +80,7 @@ extract_expression_matrix <- function(exprs_obj, sce_assay = "counts") {
   } else if(is.matrix(exprs_obj) && is.numeric(exprs_obj)) {
     Y <- exprs_obj
   } else {
-    stop("Input exprs_obj must either be an ExpressionSet or numeric matrix of gene expression")
+    stop("Input exprs_obj must either be a SummarizedExperiment or numeric matrix of gene expression")
   }
   return(Y)
 }
@@ -118,41 +118,15 @@ initialize_X <- function(X, N, verbose = FALSE) {
   return(X)
 }
 
-#' Makes sure the exprs obj is of correct size
-# subset_exprs_obj <- function(exprs_obj, rho) {
-#   G_e <- NULL
-#
-#   G_r <- nrow(rho)
-#
-#   if(is.matrix(exprs_obj) && is.numeric(exprs_obj)) {
-#     # exprs_obj represents cell by count matrix
-#     G_e <- ncol(exprs_obj)
-#   } else if(is(exprs_obj, "SummarizedExperiment")) {
-#     G_e <- nrow(exprs_obj)
-#   } else {
-#     stop("exprs_obj must either be numeric matrix or SummarizedExperimen")
-#   }
-#
-#   if(G_e == G_r) {
-#     # dimensions match, don't need to do anything
-#     return(exprs_obj)
-#   }
-#
-#   if(G_e < G_r) {
-#     stop("Not enough genes in expression object compared to that given by rho")
-#   }
-#
-#   # Now we know that the exprs_obj is larger than the
-#   # rho matrix so we need to find a way to subset
-#   rho_names <- rownames(rho)
-#
-#   if(is.null(rho_names)) {
-#     stop("If the provided expression object contains more genes than the marker matrix, cellassign will attempt to subset the expression object. However, no gene names have been supplied to the marker matrix (rownames)")
-#   }
-#
-#   # Now we need to lookup where rho_names are
-#
-#
-#
-# }
+
+#' Check for tensorflow
+#'
+#' @keywords internal
+#'
+#' @return Installs tensorflow if not already installed
+.onLoad <- function(libname, pkgname) {
+  if(is.null(tensorflow::tf_version())) {
+    stop("Tensorflow installation not detected. Please run 'tensorflow::install_tensorflow()' to continue...")
+  }
+}
 

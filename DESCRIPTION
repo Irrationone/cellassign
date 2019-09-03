@@ -1,7 +1,7 @@
 Package: cellassign
-Version: 0.99.2
-Title: What the Package Does (One Line, Title Case)
-Description: What the package does (one paragraph).
+Version: 0.99.11
+Title: Automated, probabilistic assignment of scRNA-seq to cell types
+Description: CellAssign assigns cells measured with scRNA-seq to both known and de novo cell types based on the declaring certain genes as markers for different cell types.
 Authors@R: c(
   person("Allen", "Zhang", email = "alzhang@bccrc.ca", role = c("aut")),
   person("Kieran", "Campbell", email = "kieranrcampbell@gmail.com", role = c("aut", "cre"))
@@ -12,7 +12,6 @@ Depends: R (>= 3.6)
 Imports:
     methods,
     stats,
-    glue,
     tensorflow,
     SummarizedExperiment,
     scran

@@ -15,7 +15,6 @@ entry_stop_gradients <- function(target, mask) {
 #' cellassign inference in tensorflow, semi-supervised version
 #'
 #' @import tensorflow
-#' @importFrom glue glue
 #'
 #' @return A list of MLE cell type calls, MLE parameter estimates,
 #' and log likelihoods during optimization.
@@ -72,12 +71,32 @@ inference_tensorflow <- function(Y,
   }
 
   ## Regular variables
-  delta_log <- tf$Variable(tf$random_uniform(shape(G,C), minval = -2, maxval = 2, seed = random_seed, dtype = tf$float64), dtype = tf$float64,
-                           constraint = function(x) tf$clip_by_value(x, tf$constant(log(min_delta), dtype = tf$float64), tf$constant(Inf, dtype = tf$float64)))
+  delta_log <- tf$Variable(tf$random_uniform(shape(G,C),
+                                             minval = -2,
+                                             maxval = 2,
+                                             seed = random_seed,
+                                             dtype = tf$float64),
+                           dtype = tf$float64,
+                           constraint = function(x) {
+                             tf$clip_by_value(x,
+                                              tf$constant(log(min_delta),
+                                                          dtype = tf$float64),
+                                              tf$constant(Inf, dtype = tf$float64))
+                             })
 
-  beta <- tf$Variable(tf$random_normal(shape(G,P), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  beta <- tf$Variable(tf$random_normal(shape(G,P),
+                                       mean = 0,
+                                       stddev = 1,
+                                       seed = random_seed,
+                                       dtype = tf$float64),
+                      dtype = tf$float64)
 
-  theta_logit <- tf$Variable(tf$random_normal(shape(C), mean = 0, stddev = 1, seed = random_seed, dtype = tf$float64), dtype = tf$float64)
+  theta_logit <- tf$Variable(tf$random_normal(shape(C),
+                                              mean = 0,
+                                              stddev = 1,
+                                              seed = random_seed,
+                                              dtype = tf$float64),
+                             dtype = tf$float64)
 
   ## Spline variables
   a <- tf$exp(tf$Variable(tf$zeros(shape = B, dtype = tf$float64)))
@@ -91,17 +110,21 @@ inference_tensorflow <- function(Y,
   theta_log = tf$nn$log_softmax(theta_logit)
 
   # Model likelihood
-  base_mean <- tf$transpose(tf$einsum('np,gp->gn', X_, beta) + tf$log(s_)) #+ tf$add(tf$log(s_), tf$log(control_pct_), name = "s_to_control"))
+  base_mean <- tf$transpose(tf$einsum('np,gp->gn', X_, beta) +
+                              tf$log(s_))
 
   base_mean_list <- list()
   for(c in seq_len(C)) base_mean_list[[c]] <- base_mean
-  mu_ngc = tf$add(tf$stack(base_mean_list, 2), tf$multiply(delta, rho_), name = "adding_base_mean_to_delta_rho")
+  mu_ngc = tf$add(tf$stack(base_mean_list, 2),
+                  tf$multiply(delta, rho_),
+                  name = "adding_base_mean_to_delta_rho")
 
   mu_cng = tf$transpose(mu_ngc, shape(2,0,1))
 
   mu_cngb <- tf$tile(tf$expand_dims(mu_cng, axis = 3L), c(1L, 1L, 1L, B))
 
-  phi_cng <- tf$reduce_sum(a * tf$exp(-b * tf$square(mu_cngb - basis_means)), 3L) + LOWER_BOUND
+  phi_cng <- tf$reduce_sum(a * tf$exp(-b * tf$square(mu_cngb - basis_means)), 3L) +
+    LOWER_BOUND
   phi <- tf$transpose(phi_cng, shape(1,2,0))
 
   mu_ngc <- tf$transpose(mu_cng, shape(1,2,0))
@@ -136,10 +159,11 @@ inference_tensorflow <- function(Y,
                                   scale = delta_log_variance)
     delta_log_prob <- -tf$reduce_sum(delta_log_prior$log_prob(delta_log))
   }
-  
+
   THETA_LOWER_BOUND <- 1e-20
 
-  theta_log_prior <- tfd$Dirichlet(concentration = tf$constant(dirichlet_concentration, dtype = tf$float64))
+  theta_log_prior <- tfd$Dirichlet(concentration = tf$constant(dirichlet_concentration,
+                                                               dtype = tf$float64))
   theta_log_prob <- -theta_log_prior$log_prob(tf$exp(theta_log) + THETA_LOWER_BOUND)
 
   ## End priors
@@ -178,12 +202,19 @@ inference_tensorflow <- function(Y,
     ll <- 0 # log likelihood for this "epoch"
     for(b in seq_len(n_batches)) {
 
-      fd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho)
+      fd <- dict(Y_ = Y[splits[[b]], ],
+                 X_ = X[splits[[b]], , drop = FALSE],
+                 s_ = s[splits[[b]]],
+                 rho_ = rho)
 
       g <- sess$run(gamma, feed_dict = fd)
 
       # M-step
-      gfd <- dict(Y_ = Y[splits[[b]], ], X_ = X[splits[[b]], , drop = FALSE], s_ = s[splits[[b]]], rho_ = rho, gamma_fixed = g)
+      gfd <- dict(Y_ = Y[splits[[b]], ],
+                  X_ = X[splits[[b]], , drop = FALSE],
+                  s_ = s[splits[[b]]],
+                  rho_ = rho,
+                  gamma_fixed = g)
 
       Q_old <- sess$run(Q, feed_dict = gfd)
       Q_diff <- rel_tol_adam + 1
@@ -209,7 +240,11 @@ inference_tensorflow <- function(Y,
     }
 
     ll_diff <- (ll - ll_old) / abs(ll_old)
-    print(glue("{mi}\tL old: {ll_old}; L new: {ll}; Difference (%): {ll_diff}"))
+
+    if(verbose) {
+      message(sprintf("%i\tL old: %f; L new: %f; Difference (%%): %f",
+                      mi, ll_old, ll, ll_diff))
+    }
     ll_old <- ll
     log_liks <- c(log_liks, ll)
 

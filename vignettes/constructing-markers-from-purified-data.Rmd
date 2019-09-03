@@ -33,21 +33,30 @@ suppressPackageStartupMessages({
 
 # Overview
 
-In many situations, marker genes for cell types are either known _a priori_ as expert knowledge, or can be curated through databases such as the [Cellmark](http://biocc.hrbmu.edu.cn/CellMarker/) database. Alternatively, if purified expression data exists (either in bulk or single-cell form), it is possible to quickly derive marker genes using the `findMarkers` function in the [scran](http://bioconductor.org/packages/release/bioc/html/scran.html) R package.
+In many situations, marker genes for cell types are either known _a priori_ 
+as expert knowledge, or can be curated through databases such as the [Cellmark](http://biocc.hrbmu.edu.cn/CellMarker/) database. Alternatively, 
+if purified expression data exists (either in bulk or single-cell form), it 
+is possible to quickly derive marker genes using the `findMarkers` function 
+in the [scran](http://bioconductor.org/packages/release/bioc/html/scran.html) 
+R package.
 
-Below we detail a case study in deriving marker genes through a differential expression approach.
+Below we detail a case study in deriving marker genes through a differential 
+expression approach.
 
 # Data
 
 ## Overview
 
-We take bulk RNA-seq data from [Holik et al. Nucleic Acids Research 2017](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5389713/) to derive marker genes for 3 different cell lines. This is packaged with `cellassign` as `holik_data`:
+We take bulk RNA-seq data from [Holik et al. Nucleic Acids Research 2017](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5389713/) to derive 
+marker genes for 3 different cell lines. This is packaged with `cellassign` 
+as `holik_data`:
 
 ```{r}
 data(holik_data)
 ```
 
-which contains a matrix of counts, where each row is a gene (index by entrez ID) and each column is a sample:
+which contains a matrix of counts, where each row is a gene 
+(index by entrez ID) and each column is a sample:
 
 ```{r}
 head(holik_data$counts[,1:2])
@@ -65,13 +74,16 @@ head(holik_data$cell_line)
 We first provide a map from entrez IDs to gene symbols:
 
 ```{r}
-entrez_map <- select(org.Hs.eg.db, as.character(rownames(holik_data$counts)), c("SYMBOL"), "ENTREZID")
+entrez_map <- select(org.Hs.eg.db, 
+                     as.character(rownames(holik_data$counts)), 
+                     c("SYMBOL"), "ENTREZID")
 gene_annotations <- entrez_map %>%
   dplyr::rename(GeneID=ENTREZID,
                 Symbol=SYMBOL)
 ```
 
-Then construct the `DGEList` object for input to `limma voom`, filtering out lowly expressed genes:
+Then construct the `DGEList` object for input to `limma voom`, 
+filtering out lowly expressed genes:
 
 ```{r}
 dge <- DGEList(counts = holik_data$counts, 
@@ -90,7 +102,8 @@ dge_filt <- calcNormFactors(dge_filt, method="TMM")
 
 # Differential expression
 
-We next perform differential expression using Limma Voom on a subset of 3 samples: HCC827, H2228, H1975:
+We next perform differential expression using Limma Voom on a 
+subset of 3 samples: HCC827, H2228, H1975:
 
 ```{r}
 dge_subset <- dge_filt[,dge_filt$samples$group %in% c("HCC827", "H2228", "H1975")]
@@ -100,7 +113,8 @@ v <- voom(dge_subset, design)
 fit <- lmFit(v, design)
 ```
 
-Next, fit constrasts to find differentially expressed genes between cell types:
+Next, fit constrasts to find differentially expressed genes between 
+cell types:
 
 ```{r}
 contrast.matrix <- makeContrasts(H2228 - H1975, 
@@ -111,7 +125,8 @@ fit2 <- contrasts.fit(fit, contrast.matrix)
 fit2 <- eBayes(fit2)
 ```
 
-Finally, compute gene summary statistics and filter to only significantly differentially expressed geens (FDR < 0.05):
+Finally, compute gene summary statistics and filter to only 
+significantly differentially expressed geens (FDR < 0.05):
 
 ```{r}
 tt <- topTable(fit2, n=Inf)
@@ -123,7 +138,8 @@ head(tt_sig)
 
 # Marker gene derivation
 
-To derive marker genes, we first create a log fold change matrix using H1975 as the baseline expression:
+To derive marker genes, we first create a log fold change 
+matrix using H1975 as the baseline expression:
 
 ```{r}
 lfc_table <- tt_sig[,c("H2228...H1975", "HCC827...H1975")]
@@ -136,7 +152,9 @@ rownames(lfc_table) <- tt_sig$GeneID
 ```
 
 
-Then, for each gene, we subtract the minimum log fold change, as we care about overexpression of genes relative to some minimum expression level, as this defines a marker gene:
+Then, for each gene, we subtract the minimum log fold change, as 
+we care about overexpression of genes relative to some minimum 
+expression level, as this defines a marker gene:
 
 ```{r}
 lfc_table <- as.matrix(lfc_table)
@@ -144,7 +162,9 @@ lfc_table <- lfc_table - rowMins(lfc_table)
 lfc_table <- as.data.frame(lfc_table)
 ```
 
-We now define a helper function for turning log fold changes into a binary matrix. This takes a matrix and a threshold, and any values less than or equal to the threshold are set to 0, and all others to 1:
+We now define a helper function for turning log fold changes into 
+a binary matrix. This takes a matrix and a threshold, and any values 
+less than or equal to the threshold are set to 0, and all others to 1:
 
 ```{r}
 binarize <- function(x, threshold) {
@@ -155,19 +175,23 @@ binarize <- function(x, threshold) {
 }
 ```
 
-Next, we implement a basic procedure for binarizing this matrix. Essentially, we look for the largest 'gap' in expression for each gene, and the cell types with expression above this gap are designated has having that gene as a marker:
+Next, we implement a basic procedure for binarizing this matrix. 
+Essentially, we look for the largest 'gap' in expression for each gene, 
+and the cell types with expression above this gap are designated has 
+having that gene as a marker:
 
 ```{r}
 # Find the biggest difference
 maxdiffs <- apply(lfc_table, 1, function(x) max(diff(sort(x))))
 
-# 
+#
 thres_vals <- apply(lfc_table, 1, function(x) sort(x)[which.max(diff(sort(x)))])
 expr_mat_thres <- plyr::rbind.fill(lapply(1:nrow(lfc_table), function(i) {
   binarize(lfc_table[i,], thres_vals[i])
 }))
 rownames(expr_mat_thres) <- rownames(lfc_table)
-marker_gene_mat <- expr_mat_thres[(maxdiffs >= quantile(maxdiffs, c(.99))) & (thres_vals <= log(2)),] %>%
+marker_gene_mat <- expr_mat_thres[(maxdiffs >= quantile(maxdiffs, c(.99))) 
+                                  & (thres_vals <= log(2)),] %>%
   as.matrix
 ```
 
@@ -198,7 +222,8 @@ head(marker_gene_mat)
 pheatmap(t(marker_gene_mat))
 ```
 
-Note that the expression data used for input to `CellAssign` should use only these as input.
+Note that the expression data used for input to `CellAssign` should 
+use only these as input.
 
 # Technical
 
