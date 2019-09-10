@@ -74,7 +74,7 @@ Please see the package vignette for details and caveats.
 
 # Paper
 
-[Probabilistic cell type assignment of single-cell transcriptomic data reveals spatiotemporal microenvironment dynamics in human cancers, _Nature Methods 2019_](https://www.nature.com/articles/s41592-019-0529-1)
+[Probabilistic cell-type assignment of single-cell RNA-seq for tumor microenvironment profiling, _Nature Methods 2019_](https://www.nature.com/articles/s41592-019-0529-1)
 
 # Authors
 
