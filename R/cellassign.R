@@ -199,8 +199,13 @@ cellassign <- function(exprs_obj,
   }
 
   # Check the dimensions add up
-  stopifnot(nrow(X) == N)
-  stopifnot(nrow(rho) == G)
+  if(nrow(X) != N) {
+    stop("Number of rows of covariate matrix must match number of cells provided")
+  }
+
+  if(nrow(rho) != G) {
+    stop("Number of genes provided in marker_gene_info should match number of genes in exprs_obj and be marker genes only")
+  }
 
 
   # Compute size factors for each cell
