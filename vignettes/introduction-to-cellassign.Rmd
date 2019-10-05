@@ -1,7 +1,7 @@
 ---
 title: "Assigning single-cells to known cell types with CellAssign"
 author: "Allen W Zhang and Kieran R Campbell"
-date: "September 2019"
+date: "October 2019"
 package: "cellassign"
 output: BiocStyle::html_document
 vignette: >
@@ -43,7 +43,7 @@ details please see the
 ```{r, eval=FALSE}
 install.packages("tensorflow")
 library(tensorflow)
-install_tensorflow()
+install_tensorflow(version='1.14')
 ```
 
 You can confirm that the installation succeeded by running:
@@ -81,7 +81,7 @@ library(SingleCellExperiment)
 library(cellassign)
 ```
 
-We use an example `SingleCellExperiment` consisting of 10 marker genes 
+We use an example `SingleCellExperiment` consisting of 200 genes 
 and 500 cells:
 
 ```{r}
@@ -101,23 +101,25 @@ Also provided is an example gene-by-cell-type binary matrix, whose
 entries are 1 if a gene is a marker for a given cell type and 0 otherwise:
 
 ```{r}
-data(example_rho)
-print(example_rho)
+data(example_marker_mat)
+print(example_marker_mat)
 ```
 
 We further require size factors for each cell. These are stored 
 in `sizeFactors(example_sce)` - for your data we recommend computing 
-them using the `computeSumFactors` function from the `scran` package.
-
-We then call `cellassign` using the `cellassign()` function, passing 
-in the above information:
-
+them using the `computeSumFactors` function from the `scran` package. Note: **it is highly recommended to compute size factors using the full set of genes, before subsetting to markers for input to cellassign**.
 
 ```{r}
 s <- sizeFactors(example_sce)
+```
 
-fit <- cellassign(exprs_obj = example_sce, 
-                  marker_gene_info = example_rho, 
+We then call `cellassign` using the `cellassign()` function, passing 
+in the above information. **It is critical that gene expression data containing only marker genes is used as input to cellassign**. We do this here by subsetting the input `SingleCellExperiment` using the row names (gene names) of the marker matrix. This also ensures that the order of the genes in the gene expression data matches the order of the genes in the marker matrix.
+
+
+```{r}
+fit <- cellassign(exprs_obj = example_sce[rownames(example_marker_mat),], 
+                  marker_gene_info = example_marker_mat, 
                   s = s, 
                   learning_rate = 1e-2, 
                   shrinkage = TRUE,
@@ -303,7 +305,7 @@ We can then perform an equivalent cell assignment passing this in also:
 
 ```{r, eval = FALSE}
 fit <- cellassign(exprs_obj = example_sce, 
-                  marker_gene_info = example_rho, 
+                  marker_gene_info = example_marker_mat, 
                   X = X,
                   s = s, 
                   learning_rate = 1e-2, 

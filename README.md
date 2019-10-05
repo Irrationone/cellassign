@@ -20,7 +20,7 @@
 
 ``` r
 install.packages("tensorflow")
-tensorflow::install_tensorflow()
+tensorflow::install_tensorflow(version='1.14')
 ```
 
 `cellassign` can then be installed from github:

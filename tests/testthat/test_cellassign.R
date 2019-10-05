@@ -3,13 +3,13 @@ context("Basic operations")
 test_that("cellassign(...) returns a valid object", {
   library(SummarizedExperiment)
   data(example_sce)
-  data(example_rho)
+  data(example_marker_mat)
   N <- ncol(example_sce)
-  G <- nrow(example_sce)
-  C <- ncol(example_rho)
+  G <- nrow(example_marker_mat)
+  C <- ncol(example_marker_mat)
 
-  fit <- cellassign(example_sce,
-                    example_rho,
+  fit <- cellassign(example_sce[rownames(example_marker_mat),],
+                    example_marker_mat,
                     s = sizeFactors(example_sce),
                     max_iter_adam = 2,
                     max_iter_em = 2)
@@ -22,7 +22,7 @@ test_that("cellassign(...) returns a valid object", {
 
   cell_type_names <- sort(unique(cell_types))
 
-  expect_equal(cell_type_names, sort(colnames(example_rho)))
+  expect_equal(cell_type_names, sort(colnames(example_marker_mat)))
 
   print(dim(fit$mle_params$gamma))
 
@@ -35,13 +35,13 @@ test_that("cellassign(...) returns a valid object", {
 test_that("cellassign(...) returns a valid SingleCellExperiment", {
   library(SummarizedExperiment)
   data(example_sce)
-  data(example_rho)
+  data(example_marker_mat)
   N <- ncol(example_sce)
-  G <- nrow(example_sce)
-  C <- ncol(example_rho)
+  G <- nrow(example_marker_mat)
+  C <- ncol(example_marker_mat)
 
-  sce <- cellassign(example_sce,
-                    example_rho,
+  sce <- cellassign(example_sce[rownames(example_marker_mat),],
+                    example_marker_mat,
                     s = sizeFactors(example_sce),
                     max_iter_adam = 2,
                     max_iter_em = 2,
@@ -58,11 +58,11 @@ test_that("cellassign(...) returns a valid SingleCellExperiment", {
 test_that("marker_gene_list() works as required", {
 
   data(example_sce)
-  data(example_rho)
+  data(example_marker_mat)
 
   marker_gene_list <- list(
-    Group1 = c("Gene186", "Gene269", "Gene526", "Gene536", "Gene994"),
-    Group2 = c("Gene205", "Gene575", "Gene754", "Gene773", "Gene949")
+    Group1 = c("Gene1", "Gene3", "Gene4", "Gene5", "Gene10"),
+    Group2 = c("Gene2", "Gene6", "Gene7", "Gene8", "Gene9")
   )
 
   mat <- marker_list_to_mat(marker_gene_list, include_other = FALSE)
@@ -75,7 +75,7 @@ test_that("marker_gene_list() works as required", {
 
   expect_equal(sum(mat), length(unique(unlist(marker_gene_list))))
 
-  fit <- cellassign(example_sce,
+  fit <- cellassign(example_sce[rownames(mat),],
                     marker_gene_list,
                     s = sizeFactors(example_sce),
                     max_iter_adam = 2,
