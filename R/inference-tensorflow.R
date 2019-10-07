@@ -45,7 +45,6 @@ inference_tensorflow <- function(Y,
   tf$disable_v2_behavior()
 
   tfp <- reticulate::import('tensorflow_probability')
-
   tfd <- tfp$distributions
 
 

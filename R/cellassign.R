@@ -101,7 +101,7 @@
 #' data(example_sce)
 #' data(example_marker_mat)
 #'
-#' fit <- em_result <- cellassign(example_sce,
+#' fit <- em_result <- cellassign(example_sce[rownames(example_marker_mat),],
 #' marker_gene_info = example_marker_mat,
 #' s = colSums(SummarizedExperiment::assay(example_sce, "counts")),
 #' learning_rate = 1e-2,
