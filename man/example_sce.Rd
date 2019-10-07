@@ -4,7 +4,7 @@
 \name{example_sce}
 \alias{example_sce}
 \title{Example SingleCellExperiment}
-\format{An object of class \code{SingleCellExperiment} with 10 rows and 500 columns.}
+\format{An object of class \code{SingleCellExperiment} with 200 rows and 500 columns.}
 \usage{
 example_sce
 }

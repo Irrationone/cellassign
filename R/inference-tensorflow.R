@@ -40,9 +40,15 @@ inference_tensorflow <- function(Y,
                                  random_seed = NULL,
                                  min_delta = 2,
                                  dirichlet_concentration = rep(1e-2, C)) {
-  tf$reset_default_graph()
 
-  tfd <- tf$contrib$distributions
+  tf <- tf$compat$v1
+  tf$disable_v2_behavior()
+
+  tfp <- reticulate::import('tensorflow_probability')
+  tfd <- tfp$distributions
+
+
+  tf$reset_default_graph()
 
   # Data placeholders
   Y_ <- tf$placeholder(tf$float64, shape = shape(NULL, G), name = "Y_")

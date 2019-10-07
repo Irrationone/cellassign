@@ -10,7 +10,7 @@ example_cellassign_fit
 }
 \description{
 An example fit of calling \code{cellassign} on both
-\code{example_rho} and \code{example_sce}
+\code{example_marker_mat} and \code{example_sce}
 }
 \examples{
 data(example_cellassign_fit)

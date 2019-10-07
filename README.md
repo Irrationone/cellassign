@@ -20,7 +20,17 @@
 
 ``` r
 install.packages("tensorflow")
-tensorflow::install_tensorflow()
+tensorflow::install_tensorflow(extra_packages='tensorflow-probability')
+```
+
+Please ensure this installs version 2 of tensorflow. You can check this by calling
+
+```r
+tensorflow::tf_config()
+```
+
+```
+TensorFlow v2.0.0 (/usr/local/lib/python3.7/site-packages/tensorflow)
 ```
 
 `cellassign` can then be installed from github:
