@@ -20,7 +20,17 @@
 
 ``` r
 install.packages("tensorflow")
-tensorflow::install_tensorflow(version='1.14')
+tensorflow::install_tensorflow(extra_packages='tensorflow-probability')
+```
+
+Please ensure this installs version 2 of tensorflow. You can check this by calling
+
+```r
+tensorflow::tf_config()
+```
+
+```
+TensorFlow v2.0.0 (/usr/local/lib/python3.7/site-packages/tensorflow)
 ```
 
 `cellassign` can then be installed from github:
@@ -74,7 +84,7 @@ Please see the package vignette for details and caveats.
 
 # Paper
 
-[Probabilistic cell type assignment of single-cell transcriptomic data reveals spatiotemporal microenvironment dynamics in human cancers, _Biorxiv 2019_](https://www.biorxiv.org/content/early/2019/01/16/521914)
+[Probabilistic cell-type assignment of single-cell RNA-seq for tumor microenvironment profiling, _Nature Methods 2019_](https://www.nature.com/articles/s41592-019-0529-1)
 
 # Authors
 

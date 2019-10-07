@@ -43,7 +43,13 @@ details please see the
 ```{r, eval=FALSE}
 install.packages("tensorflow")
 library(tensorflow)
-install_tensorflow(version='1.14')
+install_tensorflow(extra_packages = "tensorflow-probability")
+```
+
+Please ensure this installs version 2 of tensorflow. You can check this by calling
+
+```{r}
+tensorflow::tf_config()
 ```
 
 You can confirm that the installation succeeded by running:
