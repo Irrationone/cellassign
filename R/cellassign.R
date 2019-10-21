@@ -33,7 +33,6 @@
 #' type annotations added? See details.
 #' @param sce_assay The \code{assay} from the input#' \code{SingleCellExperiment} to use: this assay
 #' should always represent raw counts.
-#' @param random_seed The random seed for the session. See details.
 #' @param num_runs Number of EM optimizations to perform (the one with the maximum
 #' log-marginal likelihood value will be used as the final).
 #'
@@ -98,10 +97,6 @@
 #' for this option to be valid.
 #' }
 #'
-#' \strong{Random seed}
-#' The seed used for variable initialization. Note that if \code{num_runs} is greater
-#' than 1, this will reset the session seed in order to provide a different
-#' (yet deterministic) seed to each run.
 #'
 #' @examples
 #' data(example_sce)
@@ -136,8 +131,7 @@ cellassign <- function(exprs_obj,
                        verbose = TRUE,
                        sce_assay = "counts",
                        return_SCE = FALSE,
-                       num_runs = 1,
-                       random_seed = NULL) {
+                       num_runs = 1) {
 
   # Work out rho
   rho <- NULL
@@ -233,16 +227,7 @@ cellassign <- function(exprs_obj,
 
   res <- NULL
 
-  seeds <- NULL
-  if(!is.null(random_seed)) {
-    if(num_runs == 1) {
-      seeds <- random_seed
-    } else {
-      set.seed(random_seed)
-      seeds <- sample(.Machine$integer.max - 1, num_runs)
-    }
-  }
-
+  seeds <- sample(.Machine$integer.max - 1, num_runs)
 
   run_results <- lapply(seq_len(num_runs), function(i) {
     res <- inference_tensorflow(Y = Y,

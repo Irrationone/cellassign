@@ -9,7 +9,7 @@ cellassign(exprs_obj, marker_gene_info, s = NULL, min_delta = 2,
   dirichlet_concentration = 0.01, rel_tol_adam = 1e-04,
   rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
   learning_rate = 0.1, verbose = TRUE, sce_assay = "counts",
-  return_SCE = FALSE, num_runs = 1, random_seed = NULL)
+  return_SCE = FALSE, num_runs = 1)
 }
 \arguments{
 \item{exprs_obj}{Either a matrix representing gene
@@ -60,8 +60,6 @@ type annotations added? See details.}
 
 \item{num_runs}{Number of EM optimizations to perform (the one with the maximum
 log-marginal likelihood value will be used as the final).}
-
-\item{random_seed}{The random seed for the session. See details.}
 }
 \value{
 An object of class \code{cellassign}. See \code{details}
@@ -124,11 +122,6 @@ estimate of the cell type
 Note that a \code{SingleCellExperiment} must be provided as \code{exprs_obj}
 for this option to be valid.
 }
-
-\strong{Random seed}
-The seed used for variable initialization. Note that if \code{num_runs} is greater
-than 1, this will reset the session seed in order to provide a different
-(yet deterministic) seed to each run.
 }
 \examples{
 data(example_sce)
