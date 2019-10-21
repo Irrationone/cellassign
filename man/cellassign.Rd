@@ -51,15 +51,15 @@ to perform in each M-step}
 
 \item{verbose}{Logical - should running info be printed?}
 
-\item{sce_assay}{The \code{assay} from the input
-\code{SingleCellExperiment} to use: this assay
+\item{sce_assay}{The \code{assay} from the input#' \code{SingleCellExperiment} to use: this assay
 should always represent raw counts.}
 
 \item{return_SCE}{Logical - should a SingleCellExperiment be returned
 with the cell
 type annotations added? See details.}
 
-\item{num_runs}{Number of EM runs to perform}
+\item{num_runs}{Number of EM optimizations to perform (the one with the maximum
+log-marginal likelihood value will be used as the final).}
 }
 \value{
 An object of class \code{cellassign}. See \code{details}

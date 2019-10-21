@@ -31,10 +31,10 @@
 #' @param return_SCE Logical - should a SingleCellExperiment be returned
 #' with the cell
 #' type annotations added? See details.
-#' @param sce_assay The \code{assay} from the input
-#' \code{SingleCellExperiment} to use: this assay
+#' @param sce_assay The \code{assay} from the input#' \code{SingleCellExperiment} to use: this assay
 #' should always represent raw counts.
-#' @param num_runs Number of EM runs to perform
+#' @param num_runs Number of EM optimizations to perform (the one with the maximum
+#' log-marginal likelihood value will be used as the final).
 #'
 #'
 #'
@@ -96,6 +96,7 @@
 #' Note that a \code{SingleCellExperiment} must be provided as \code{exprs_obj}
 #' for this option to be valid.
 #' }
+#'
 #'
 #' @examples
 #' data(example_sce)
@@ -226,6 +227,7 @@ cellassign <- function(exprs_obj,
 
   res <- NULL
 
+  seeds <- sample(.Machine$integer.max - 1, num_runs)
 
   run_results <- lapply(seq_len(num_runs), function(i) {
     res <- inference_tensorflow(Y = Y,
@@ -246,7 +248,8 @@ cellassign <- function(exprs_obj,
                                 max_iter_em = max_iter_em,
                                 learning_rate = learning_rate,
                                 min_delta = min_delta,
-                                dirichlet_concentration = dirichlet_concentration)
+                                dirichlet_concentration = dirichlet_concentration,
+                                random_seed = seeds[i])
 
     return(structure(res, class = "cellassign"))
   })
