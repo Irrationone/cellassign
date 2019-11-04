@@ -196,9 +196,9 @@ inference_tensorflow <- function(Y,
   splits <- split(sample(seq_len(N), size = N, replace = FALSE), seq_len(n_batches))
 
   # Start the graph and inference
-  session_conf <- tf$ConfigProto(intra_op_parallelism_threads=threads,
-                                 inter_op_parallelism_threads=threads)
-  sess <- tf$Session(session_conf)
+  session_conf <- tf$ConfigProto(intra_op_parallelism_threads = threads,
+                                 inter_op_parallelism_threads = threads)
+  sess <- tf$Session(config = session_conf)
   init <- tf$global_variables_initializer()
   sess$run(init)
 

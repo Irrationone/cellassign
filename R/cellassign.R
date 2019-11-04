@@ -251,7 +251,7 @@ cellassign <- function(exprs_obj,
                                 min_delta = min_delta,
                                 dirichlet_concentration = dirichlet_concentration,
                                 random_seed = seeds[i],
-                                threads = threads)
+                                threads = as.integer(threads))
 
     return(structure(res, class = "cellassign"))
   })
