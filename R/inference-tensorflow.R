@@ -39,7 +39,8 @@ inference_tensorflow <- function(Y,
                                  learning_rate = 1e-4,
                                  random_seed = NULL,
                                  min_delta = 2,
-                                 dirichlet_concentration = rep(1e-2, C)) {
+                                 dirichlet_concentration = rep(1e-2, C),
+                                 threads = 0) {
 
   tf <- tf$compat$v1
   tf$disable_v2_behavior()
@@ -195,7 +196,9 @@ inference_tensorflow <- function(Y,
   splits <- split(sample(seq_len(N), size = N, replace = FALSE), seq_len(n_batches))
 
   # Start the graph and inference
-  sess <- tf$Session()
+  session_conf <- tf$ConfigProto(intra_op_parallelism_threads=threads,
+                                 inter_op_parallelism_threads=threads)
+  sess <- tf$Session(session_conf)
   init <- tf$global_variables_initializer()
   sess$run(init)
 

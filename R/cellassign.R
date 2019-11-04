@@ -131,7 +131,8 @@ cellassign <- function(exprs_obj,
                        verbose = TRUE,
                        sce_assay = "counts",
                        return_SCE = FALSE,
-                       num_runs = 1) {
+                       num_runs = 1,
+                       threads = 0) {
 
   # Work out rho
   rho <- NULL
@@ -249,7 +250,8 @@ cellassign <- function(exprs_obj,
                                 learning_rate = learning_rate,
                                 min_delta = min_delta,
                                 dirichlet_concentration = dirichlet_concentration,
-                                random_seed = seeds[i])
+                                random_seed = seeds[i],
+                                threads = threads)
 
     return(structure(res, class = "cellassign"))
   })
