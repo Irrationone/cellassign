@@ -35,6 +35,8 @@
 #' should always represent raw counts.
 #' @param num_runs Number of EM optimizations to perform (the one with the maximum
 #' log-marginal likelihood value will be used as the final).
+#' @param threads Maximum number of threads used by the algorithm 
+#' (defaults to the number of cores available on the machine)
 #'
 #'
 #'
