@@ -35,6 +35,8 @@
 #' should always represent raw counts.
 #' @param num_runs Number of EM optimizations to perform (the one with the maximum
 #' log-marginal likelihood value will be used as the final).
+#' @param threads Maximum number of threads used by the algorithm 
+#' (defaults to the number of cores available on the machine)
 #'
 #'
 #'
@@ -131,7 +133,8 @@ cellassign <- function(exprs_obj,
                        verbose = TRUE,
                        sce_assay = "counts",
                        return_SCE = FALSE,
-                       num_runs = 1) {
+                       num_runs = 1,
+                       threads = 0) {
 
   # Work out rho
   rho <- NULL
@@ -249,7 +252,8 @@ cellassign <- function(exprs_obj,
                                 learning_rate = learning_rate,
                                 min_delta = min_delta,
                                 dirichlet_concentration = dirichlet_concentration,
-                                random_seed = seeds[i])
+                                random_seed = seeds[i],
+                                threads = as.integer(threads))
 
     return(structure(res, class = "cellassign"))
   })
