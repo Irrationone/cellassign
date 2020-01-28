@@ -34,5 +34,5 @@ addons:
 before_install:
   - python -m pip install --user --upgrade pip
   - pip install --user numpy
-  - pip install --user tensorflow
+  - pip install --user 'tensorflow==2.1.0'
   - pip install --user tensorflow-probability
