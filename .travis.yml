@@ -32,7 +32,10 @@ addons:
       - libv8-dev
 
 before_install:
-  - python -m pip install --user --upgrade pip
-  - pip install --user numpy
-  - pip install --user 'tensorflow==2.1.0'
-  - pip install --user tensorflow-probability
+  - sudo apt-get update
+  - sudo apt-get install python3 python3-pip
+  - pip3 install --upgrade --ignore-installed --user travis virtualenv
+  - R CMD INSTALL .
+  - R -e 'Sys.setenv(PIP_QUIET=1); tensorflow::install_tensorflow(extra_packages="tensorflow-probability", version = "2.1.0")'
+  - R -e 'tensorflow::tf_config()'
+
