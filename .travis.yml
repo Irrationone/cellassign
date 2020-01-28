@@ -35,7 +35,6 @@ before_install:
   - sudo apt-get update
   - sudo apt-get install python3 python3-pip
   - pip3 install --upgrade --ignore-installed --user travis virtualenv
-  - R CMD INSTALL .
   - R -e 'Sys.setenv(PIP_QUIET=1); tensorflow::install_tensorflow(extra_packages="tensorflow-probability", version = "2.1.0")'
   - R -e 'tensorflow::tf_config()'
 
