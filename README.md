@@ -88,6 +88,12 @@ Please see the package vignette for details and caveats.
 
 [Probabilistic cell-type assignment of single-cell RNA-seq for tumor microenvironment profiling, _Nature Methods 2019_](https://www.nature.com/articles/s41592-019-0529-1)
 
+# Code of Conduct 
+
+Please note that the 'cellassign' project is released with a
+[Contributor Code of Conduct](CODE_OF_CONDUCT.md).
+By contributing to this project, you agree to abide by its terms.
+
 # Authors
 
 Allen W Zhang, University of British Columbia
