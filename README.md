@@ -49,11 +49,13 @@ With [conda](https://conda.io/miniconda.html), install the current release versi
 conda install -c conda-forge -c bioconda r-cellassign
 ```
 
-## Vignettes
+## Documentation
 
-- [Assigning single-cells to known cell types with CellAssign](https://irrationone.github.io/cellassign/introduction-to-cellassign.html)
+Package documentation can be found [here](https://irrationone.github.io/cellassign/index.html). This includes the following vignettes:
 
-- [Constructing marker genes from purified bulk/scRNA-seq data](https://irrationone.github.io/cellassign/constructing-markers-from-purified-data.html)
+- [Assigning single-cells to known cell types with CellAssign](https://irrationone.github.io/cellassign/articles/introduction-to-cellassign.html)
+
+- [Constructing marker genes from purified bulk/scRNA-seq data](https://irrationone.github.io/cellassign/articles/constructing-markers-from-purified-data.html)
 
 ## Basic usage
 
