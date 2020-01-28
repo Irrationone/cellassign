@@ -31,9 +31,8 @@ addons:
       - libv8-dev
 
 before_install:
-  - pyenv versions
   - sudo apt-get update
-  - sudo apt-get install python3.7 python3.7-pip
+  - sudo apt-get install python3.6 python3.6-pip
   - pip3 install --upgrade --ignore-installed --user travis virtualenv
   - R -e 'Sys.setenv(PIP_QUIET=1); install.packages("tensorflow"); tensorflow::install_tensorflow(extra_packages="tensorflow-probability", version = "2.1.0", method="virtualenv")'
   - R -e 'tensorflow::tf_config()'
