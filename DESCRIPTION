@@ -29,7 +29,8 @@ Suggests:
     matrixStats,
     plyr,
     magrittr,
-    reticulate
+    reticulate,
+    magick
 biocViews:
   Software, 
   Transcriptomics, 
