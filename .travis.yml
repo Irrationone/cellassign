@@ -24,7 +24,7 @@ addons:
     packages:
       - libmagick++-dev
       - wget
-      - libatlas3gf-base
+      - libatlas3-base
       - libatlas-dev
       - python-joblib
       - python-dev
