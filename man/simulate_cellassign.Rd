@@ -4,8 +4,18 @@
 \alias{simulate_cellassign}
 \title{Simulate from the cellassign model}
 \usage{
-simulate_cellassign(rho, s, pi, delta, B = 20, a, beta, X = NULL,
-  min_Y = 0, max_Y = 1000)
+simulate_cellassign(
+  rho,
+  s,
+  pi,
+  delta,
+  B = 20,
+  a,
+  beta,
+  X = NULL,
+  min_Y = 0,
+  max_Y = 1000
+)
 }
 \arguments{
 \item{rho}{A gene by cell type binary matrix relating markers to cell types}

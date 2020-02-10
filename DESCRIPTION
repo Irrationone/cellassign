@@ -40,6 +40,6 @@ biocViews:
 LazyData: true
 ByteCompile: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.2
 VignetteBuilder: knitr
 BugReports: https://github.com/irrationone/cellassign/issues

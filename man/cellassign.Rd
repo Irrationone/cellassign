@@ -4,12 +4,27 @@
 \alias{cellassign}
 \title{Annotate cells to cell types using cellassign}
 \usage{
-cellassign(exprs_obj, marker_gene_info, s = NULL, min_delta = 2,
-  X = NULL, B = 10, shrinkage = TRUE, n_batches = 1,
-  dirichlet_concentration = 0.01, rel_tol_adam = 1e-04,
-  rel_tol_em = 1e-04, max_iter_adam = 1e+05, max_iter_em = 20,
-  learning_rate = 0.1, verbose = TRUE, sce_assay = "counts",
-  return_SCE = FALSE, num_runs = 1)
+cellassign(
+  exprs_obj,
+  marker_gene_info,
+  s = NULL,
+  min_delta = 2,
+  X = NULL,
+  B = 10,
+  shrinkage = TRUE,
+  n_batches = 1,
+  dirichlet_concentration = 0.01,
+  rel_tol_adam = 1e-04,
+  rel_tol_em = 1e-04,
+  max_iter_adam = 1e+05,
+  max_iter_em = 20,
+  learning_rate = 0.1,
+  verbose = TRUE,
+  sce_assay = "counts",
+  return_SCE = FALSE,
+  num_runs = 1,
+  threads = 0
+)
 }
 \arguments{
 \item{exprs_obj}{Either a matrix representing gene
@@ -60,6 +75,9 @@ type annotations added? See details.}
 
 \item{num_runs}{Number of EM optimizations to perform (the one with the maximum
 log-marginal likelihood value will be used as the final).}
+
+\item{threads}{Maximum number of threads used by the algorithm
+(defaults to the number of cores available on the machine)}
 }
 \value{
 An object of class \code{cellassign}. See \code{details}
