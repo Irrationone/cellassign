@@ -4,6 +4,12 @@ warnings_are_errors: false
 dist: xenial
 r: bioc-devel
 
+branches:
+  only:
+    - bioc
+    - master
+    - basilisk
+
 r_packages:
   - devtools
   - rmarkdown
