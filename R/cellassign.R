@@ -306,8 +306,8 @@ print.cellassign <- function(x, ...) {
 
 #' @rdname celltypes
 #' @export
-celltypes <- function(x) {
-  UseMethod("celltypes", x)
+celltypes <- function(x, assign_prob = 0.95) {
+  UseMethod("celltypes")
 }
 
 #' @rdname cellprobs
@@ -326,9 +326,12 @@ mleparams <- function(x) {
 #'
 #' Get the MLE cell type estimates for each cell
 #'
-#' @return A character vector with the MLE cell type for each cell
+#' @return A character vector with the MLE cell type for each cell, if the probability
+#' is greater than \code{assign_prob}.
 #'
 #' @param x An object of class \code{cellassign} returned by a call to \code{cellassign(...)}
+#' @param assign_prob The probability threshold above which a cell is assigned to a given cell type,
+#' otherwise "unassigned"
 #'
 #' @rdname celltypes
 #' @export
@@ -336,9 +339,18 @@ mleparams <- function(x) {
 #' @examples
 #' data(example_cellassign_fit)
 #' celltypes(example_cellassign_fit)
-celltypes.cellassign <- function(x) {
+celltypes.cellassign <- function(x, assign_prob = 0.95) {
   stopifnot(is(x, 'cellassign'))
-  x$cell_type
+  
+  cp <- cellprobs(x)
+  
+  mle_celltypes <- get_mle_cell_type(cp)
+  
+  max_prob <- matrixStats::rowMaxs(cp)
+  
+  mle_celltypes[max_prob < assign_prob] <- "unassigned"
+  
+  mle_celltypes
 }
 
 #' Get the cell assignment probabilities of a \code{cellassign} fit

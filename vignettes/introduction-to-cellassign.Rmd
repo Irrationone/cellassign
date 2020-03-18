@@ -144,7 +144,9 @@ We can access the maximum likelihood estimates (MLE)  of cell type using the `ce
 print(head(celltypes(fit)))
 ```
 
-and all MLE parameters using `mleparams`:
+By default, this assigns a cell to a type of the probability of assignment is greater than 0.95, and "unassigned" otherwise. This can be changed with the `assign_prob` parameter.
+
+It is also possible to get all MLE parameters using `mleparams`:
 
 ```{r}
 print(str(mleparams(fit)))

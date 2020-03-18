@@ -5,15 +5,19 @@
 \alias{celltypes.cellassign}
 \title{Get the cell type assignments of a \code{cellassign} fit}
 \usage{
-celltypes(x)
+celltypes(x, assign_prob = 0.95)
 
-\method{celltypes}{cellassign}(x)
+\method{celltypes}{cellassign}(x, assign_prob = 0.95)
 }
 \arguments{
 \item{x}{An object of class \code{cellassign} returned by a call to \code{cellassign(...)}}
+
+\item{assign_prob}{The probability threshold above which a cell is assigned to a given cell type,
+otherwise "unassigned"}
 }
 \value{
-A character vector with the MLE cell type for each cell
+A character vector with the MLE cell type for each cell, if the probability
+is greater than \code{assign_prob}.
 }
 \description{
 Get the MLE cell type estimates for each cell
