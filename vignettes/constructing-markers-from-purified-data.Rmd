@@ -113,7 +113,7 @@ v <- voom(dge_subset, design)
 fit <- lmFit(v, design)
 ```
 
-Next, fit constrasts to find differentially expressed genes between 
+Next, fit contrasts to find differentially expressed genes between 
 cell types:
 
 ```{r}
